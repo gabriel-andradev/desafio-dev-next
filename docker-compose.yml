@@ -10,7 +10,7 @@ services:
     environment:
       PORT: 3333
       DATABASE_URL: "file:./prod.db"
-      JWT_SECRET: "9e84a642f98739e3e9ce45286e2e2bedc638a6fdb22dba5b5c688c0cef6692fd4510701a9b71bfa9495a11f92ca18591877c1cc64c6466dd4da52f1a5374c9f8"
+      JWT_SECRET: ${JWT_SECRET:-cobuccio-dev-secret-key-change-in-production}
       JWT_EXPIRES_IN: "1d"
       FRONTEND_URL: "http://localhost:3000"
     healthcheck:
