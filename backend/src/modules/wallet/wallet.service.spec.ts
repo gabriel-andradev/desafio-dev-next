@@ -1,0 +1,287 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { WalletService } from './wallet.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
+
+describe('WalletService', () => {
+  let service: WalletService;
+
+  const mockTx = {
+    wallet: {
+      findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    transaction: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      updateMany: jest.fn(),
+    },
+  };
+
+  const mockPrismaService = {
+    $transaction: jest.fn((callback: (tx: typeof mockTx) => unknown) =>
+      callback(mockTx),
+    ),
+    wallet: mockTx.wallet,
+    transaction: {
+      ...mockTx.transaction,
+      findMany: jest.fn(),
+    },
+  };
+
+  const mockUsersService = {
+    findByEmailOrCpf: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        WalletService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: UsersService, useValue: mockUsersService },
+      ],
+    }).compile();
+
+    service = module.get<WalletService>(WalletService);
+  });
+
+  describe('deposit', () => {
+    it('should increment balance on a regular positive wallet', async () => {
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balanceCents: 10000,
+      });
+
+      mockTx.wallet.update.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balanceCents: 25000,
+      });
+
+      mockTx.transaction.create.mockResolvedValue({
+        id: 'tx-1',
+        type: 'DEPOSIT',
+        status: 'COMPLETED',
+        amountCents: 15000,
+      });
+
+      const result = await service.deposit('user-1', {
+        amountCents: 15000,
+        description: 'Depósito inicial',
+      });
+
+      expect(result.previousBalanceCents).toBe(10000);
+      expect(result.newBalanceCents).toBe(25000);
+      expect(mockTx.wallet.update).toHaveBeenCalledWith({
+        where: { id: 'wallet-1' },
+        data: { balanceCents: { increment: 15000 } },
+      });
+    });
+
+    it('should offset negative balance and add remaining amount on deposit', async () => {
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balanceCents: -5000,
+      });
+
+      mockTx.wallet.update.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balanceCents: 7000,
+      });
+
+      mockTx.transaction.create.mockResolvedValue({
+        id: 'tx-2',
+        type: 'DEPOSIT',
+        status: 'COMPLETED',
+        amountCents: 12000,
+      });
+
+      const result = await service.deposit('user-1', {
+        amountCents: 12000,
+      });
+
+      expect(result.previousBalanceCents).toBe(-5000);
+      expect(result.newBalanceCents).toBe(7000);
+    });
+  });
+
+  describe('transfer', () => {
+    it('should reject transfer to the same user', async () => {
+      mockUsersService.findByEmailOrCpf.mockResolvedValue({
+        id: 'user-1',
+        name: 'Alice',
+        wallet: { id: 'wallet-1', balanceCents: 10000 },
+      });
+
+      await expect(
+        service.transfer('user-1', {
+          recipientIdentifier: 'alice@email.com',
+          amountCents: 5000,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject transfer when sender has insufficient balance', async () => {
+      mockUsersService.findByEmailOrCpf.mockResolvedValue({
+        id: 'user-2',
+        name: 'Bob',
+        wallet: { id: 'wallet-2', balanceCents: 0 },
+      });
+
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balanceCents: 3000,
+      });
+
+      mockTx.wallet.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.transfer('user-1', {
+          recipientIdentifier: 'bob@email.com',
+          amountCents: 5000,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should debit sender and credit receiver atomically when balance is sufficient', async () => {
+      mockUsersService.findByEmailOrCpf.mockResolvedValue({
+        id: 'user-2',
+        name: 'Bob',
+        wallet: { id: 'wallet-2', balanceCents: 1000 },
+      });
+
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balanceCents: 10000,
+      });
+
+      mockTx.wallet.updateMany.mockResolvedValue({ count: 1 });
+      mockTx.wallet.update.mockResolvedValue({
+        id: 'wallet-2',
+        balanceCents: 6000,
+      });
+      mockTx.wallet.findUniqueOrThrow.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 5000,
+      });
+      mockTx.transaction.create.mockResolvedValue({
+        id: 'tx-transfer-1',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        amountCents: 5000,
+      });
+
+      const result = await service.transfer('user-1', {
+        recipientIdentifier: 'bob@email.com',
+        amountCents: 5000,
+      });
+
+      expect(result.newBalanceCents).toBe(5000);
+      expect(mockTx.wallet.update).toHaveBeenCalledWith({
+        where: { id: 'wallet-2' },
+        data: { balanceCents: { increment: 5000 } },
+      });
+    });
+  });
+
+  describe('reverseTransaction', () => {
+    it('should forbid reversal if user is not a participant of the transaction', async () => {
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-outsider',
+        userId: 'user-outsider',
+      });
+
+      mockTx.transaction.findUnique.mockResolvedValue({
+        id: 'tx-1',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        amountCents: 5000,
+        senderWalletId: 'wallet-1',
+        receiverWalletId: 'wallet-2',
+      });
+
+      await expect(
+        service.reverseTransaction('user-outsider', 'tx-1', {}),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ConflictException if transaction was already reversed', async () => {
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+      });
+
+      mockTx.transaction.findUnique.mockResolvedValue({
+        id: 'tx-1',
+        type: 'TRANSFER',
+        status: 'REVERSED',
+        amountCents: 5000,
+        senderWalletId: 'wallet-1',
+        receiverWalletId: 'wallet-2',
+      });
+
+      await expect(
+        service.reverseTransaction('user-1', 'tx-1', {}),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should reverse a completed transfer and restore balances', async () => {
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+      });
+
+      mockTx.transaction.findUnique.mockResolvedValue({
+        id: 'tx-1',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        amountCents: 5000,
+        senderWalletId: 'wallet-1',
+        receiverWalletId: 'wallet-2',
+      });
+
+      mockTx.transaction.updateMany.mockResolvedValue({ count: 1 });
+      mockTx.transaction.create.mockResolvedValue({
+        id: 'tx-rev-1',
+        type: 'REVERSAL',
+        status: 'COMPLETED',
+        amountCents: 5000,
+        originalTransactionId: 'tx-1',
+      });
+      mockTx.wallet.findUniqueOrThrow.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 10000,
+      });
+
+      const result = await service.reverseTransaction('user-1', 'tx-1', {
+        reason: 'Valor incorreto',
+      });
+
+      expect(result.newBalanceCents).toBe(10000);
+      expect(result.reversalTransaction.type).toBe('REVERSAL');
+      expect(mockTx.wallet.update).toHaveBeenCalledWith({
+        where: { id: 'wallet-2' },
+        data: { balanceCents: { decrement: 5000 } },
+      });
+      expect(mockTx.wallet.update).toHaveBeenCalledWith({
+        where: { id: 'wallet-1' },
+        data: { balanceCents: { increment: 5000 } },
+      });
+    });
+  });
+});
+

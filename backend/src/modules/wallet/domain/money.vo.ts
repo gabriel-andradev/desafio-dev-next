@@ -1,0 +1,50 @@
+import { BadRequestException } from '@nestjs/common';
+
+export class Money {
+  private readonly cents: number;
+
+  private constructor(cents: number) {
+    this.cents = cents;
+  }
+
+  /**
+   * Creates a validated Money value object from an integer amount in cents.
+   */
+  static fromCents(cents: number): Money {
+    if (!Number.isInteger(cents)) {
+      throw new BadRequestException(
+        'O valor monetário deve ser representado em centavos inteiros.',
+      );
+    }
+
+    if (cents <= 0) {
+      throw new BadRequestException(
+        'O valor da operação deve ser maior que zero.',
+      );
+    }
+
+    return new Money(cents);
+  }
+
+  /**
+   * Returns the raw integer value in cents.
+   */
+  get valueInCents(): number {
+    return this.cents;
+  }
+
+  /**
+   * Checks whether a given wallet balance in cents is sufficient to cover this monetary amount.
+   */
+  isCoveredBy(balanceCents: number): boolean {
+    return balanceCents >= this.cents;
+  }
+
+  /**
+   * Adds this monetary amount to a current balance (supporting negative balance recovery).
+   */
+  addToBalance(currentBalanceCents: number): number {
+    return currentBalanceCents + this.cents;
+  }
+}
+
