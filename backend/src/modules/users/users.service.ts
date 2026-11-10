@@ -16,6 +16,9 @@ export interface CreateUserInput {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Validates uniqueness and atomically creates a new user along with an empty wallet.
+   */
   async create(input: CreateUserInput) {
     const normalizedEmail = input.email.trim().toLowerCase();
     const normalizedCpf = input.cpf.replace(/\D/g, '');
@@ -33,7 +36,6 @@ export class UsersService {
       throw new ConflictException('Este CPF já está cadastrado no sistema.');
     }
 
-    // Criação atômica de Usuário + Carteira (nested write do Prisma roda em transação)
     const user = await this.prisma.user.create({
       data: {
         name: input.name.trim(),
@@ -54,6 +56,9 @@ export class UsersService {
     return this.sanitizeUser(user);
   }
 
+  /**
+   * Finds a user by email including the password hash for authentication verification.
+   */
   async findByEmailWithPassword(email: string) {
     return this.prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
@@ -61,6 +66,9 @@ export class UsersService {
     });
   }
 
+  /**
+   * Retrieves a sanitized user profile and wallet summary by user ID.
+   */
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -74,6 +82,9 @@ export class UsersService {
     return this.sanitizeUser(user);
   }
 
+  /**
+   * Resolves a recipient user and wallet by matching either email or 11-digit CPF.
+   */
   async findByEmailOrCpf(identifier: string) {
     const trimmed = identifier.trim().toLowerCase();
     const digitsOnly = identifier.replace(/\D/g, '');
@@ -91,6 +102,9 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Lists all registered users except the current user for transfer recipient selection.
+   */
   async listRecipients(excludeUserId: string) {
     const users = await this.prisma.user.findMany({
       where: {
@@ -108,6 +122,9 @@ export class UsersService {
     return users;
   }
 
+  /**
+   * Strips sensitive fields such as passwordHash before returning user data.
+   */
   sanitizeUser(user: {
     id: string;
     name: string;

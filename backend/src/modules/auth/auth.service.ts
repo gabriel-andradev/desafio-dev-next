@@ -14,6 +14,9 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  /**
+   * Hashes the user's password, creates the account and wallet, and returns a signed JWT.
+   */
   async register(dto: RegisterDto) {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
 
@@ -32,6 +35,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Verifies user credentials against the stored bcrypt hash and issues a signed JWT.
+   */
   async login(dto: LoginDto) {
     const userWithPassword = await this.usersService.findByEmailWithPassword(
       dto.email,
