@@ -7,9 +7,10 @@ const prisma = new PrismaClient();
  * Seeds the database with two demonstration users, wallets, and sample ledger transactions.
  */
 async function main() {
-  await prisma.transaction.deleteMany();
-  await prisma.wallet.deleteMany();
-  await prisma.user.deleteMany();
+  const existingUsers = await prisma.user.count();
+  if (existingUsers > 0) {
+    return;
+  }
 
   const passwordHash = await bcrypt.hash('password123', 10);
 
