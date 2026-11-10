@@ -20,6 +20,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.4.7",
+    "@nestjs/swagger": "^7.4.2",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
@@ -58,7 +59,7 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.ts$": "ts-jest"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

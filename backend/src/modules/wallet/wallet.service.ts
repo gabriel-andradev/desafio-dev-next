@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +9,12 @@ import { UsersService } from '../users/users.service';
 import { DepositDto } from './dto/deposit.dto';
 import { TransferDto } from './dto/transfer.dto';
 import { ReverseTransactionDto } from './dto/reverse-transaction.dto';
+import { Money } from './domain/money.vo';
+import {
+  TransactionDomainRules,
+  TransactionStatus,
+  TransactionType,
+} from './domain/transaction-rules.domain';
 
 @Injectable()
 export class WalletService {
@@ -99,8 +104,8 @@ export class WalletService {
       createdAt: tx.createdAt,
       reversedAt: tx.reversedAt,
       canReverse:
-        tx.status === 'COMPLETED' &&
-        tx.type !== 'REVERSAL' &&
+        tx.status === TransactionStatus.COMPLETED &&
+        tx.type !== TransactionType.REVERSAL &&
         !tx.reversalTransaction,
     }));
   }
@@ -109,6 +114,8 @@ export class WalletService {
    * Credits the user's wallet balance atomically and records a DEPOSIT ledger entry.
    */
   async deposit(userId: string, dto: DepositDto) {
+    const money = Money.fromCents(dto.amountCents);
+
     return this.prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId },
@@ -123,15 +130,15 @@ export class WalletService {
       const updatedWallet = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
-          balanceCents: { increment: dto.amountCents },
+          balanceCents: { increment: money.valueInCents },
         },
       });
 
       const transaction = await tx.transaction.create({
         data: {
-          type: 'DEPOSIT',
-          status: 'COMPLETED',
-          amountCents: dto.amountCents,
+          type: TransactionType.DEPOSIT,
+          status: TransactionStatus.COMPLETED,
+          amountCents: money.valueInCents,
           description: dto.description?.trim() || 'Depósito em carteira',
           receiverWalletId: wallet.id,
         },
@@ -146,9 +153,11 @@ export class WalletService {
   }
 
   /**
-   * Validates recipient and balance, debits sender, credits receiver, and logs the TRANSFER atomically.
+   * Validates recipient and balance via domain rules, debits sender, credits receiver, and logs the TRANSFER atomically.
    */
   async transfer(senderUserId: string, dto: TransferDto) {
+    const money = Money.fromCents(dto.amountCents);
+
     const recipientUser = await this.usersService.findByEmailOrCpf(
       dto.recipientIdentifier,
     );
@@ -176,13 +185,20 @@ export class WalletService {
         throw new NotFoundException('Carteira do remetente não encontrada.');
       }
 
+      TransactionDomainRules.validateTransferPreconditions({
+        senderUserId,
+        recipientUserId: recipientUser.id,
+        senderBalanceCents: senderWallet.balanceCents,
+        amount: money,
+      });
+
       const debitResult = await tx.wallet.updateMany({
         where: {
           id: senderWallet.id,
-          balanceCents: { gte: dto.amountCents },
+          balanceCents: { gte: money.valueInCents },
         },
         data: {
-          balanceCents: { decrement: dto.amountCents },
+          balanceCents: { decrement: money.valueInCents },
         },
       });
 
@@ -195,7 +211,7 @@ export class WalletService {
       await tx.wallet.update({
         where: { id: recipientWalletId },
         data: {
-          balanceCents: { increment: dto.amountCents },
+          balanceCents: { increment: money.valueInCents },
         },
       });
 
@@ -205,9 +221,9 @@ export class WalletService {
 
       const transaction = await tx.transaction.create({
         data: {
-          type: 'TRANSFER',
-          status: 'COMPLETED',
-          amountCents: dto.amountCents,
+          type: TransactionType.TRANSFER,
+          status: TransactionStatus.COMPLETED,
+          amountCents: money.valueInCents,
           description:
             dto.description?.trim() ||
             `Transferência para ${recipientUser.name}`,
@@ -248,27 +264,10 @@ export class WalletService {
         throw new NotFoundException('Transação não encontrada.');
       }
 
-      const isParticipant =
-        originalTx.senderWalletId === userWallet.id ||
-        originalTx.receiverWalletId === userWallet.id;
-
-      if (!isParticipant) {
-        throw new ForbiddenException(
-          'Você não tem permissão para reverter esta transação.',
-        );
-      }
-
-      if (originalTx.type === 'REVERSAL') {
-        throw new BadRequestException(
-          'Não é permitido reverter uma transação que já é um estorno.',
-        );
-      }
-
-      if (originalTx.status === 'REVERSED') {
-        throw new ConflictException(
-          'Esta transação já foi revertida anteriormente.',
-        );
-      }
+      TransactionDomainRules.validateReversalPreconditions(
+        originalTx,
+        userWallet.id,
+      );
 
       const reason =
         dto.reason || 'Reversão solicitada pelo titular da carteira';
@@ -276,10 +275,10 @@ export class WalletService {
       const statusUpdate = await tx.transaction.updateMany({
         where: {
           id: originalTx.id,
-          status: 'COMPLETED',
+          status: TransactionStatus.COMPLETED,
         },
         data: {
-          status: 'REVERSED',
+          status: TransactionStatus.REVERSED,
           reversedAt: new Date(),
           reversalReason: reason,
         },
@@ -291,7 +290,7 @@ export class WalletService {
         );
       }
 
-      if (originalTx.type === 'DEPOSIT') {
+      if (originalTx.type === TransactionType.DEPOSIT) {
         await tx.wallet.update({
           where: { id: originalTx.receiverWalletId },
           data: {
@@ -301,8 +300,8 @@ export class WalletService {
 
         const reversalTransaction = await tx.transaction.create({
           data: {
-            type: 'REVERSAL',
-            status: 'COMPLETED',
+            type: TransactionType.REVERSAL,
+            status: TransactionStatus.COMPLETED,
             amountCents: originalTx.amountCents,
             description: `Estorno de depósito (${reason})`,
             senderWalletId: originalTx.receiverWalletId,
@@ -322,7 +321,10 @@ export class WalletService {
         };
       }
 
-      if (originalTx.type === 'TRANSFER' && originalTx.senderWalletId) {
+      if (
+        originalTx.type === TransactionType.TRANSFER &&
+        originalTx.senderWalletId
+      ) {
         await tx.wallet.update({
           where: { id: originalTx.receiverWalletId },
           data: {
@@ -339,8 +341,8 @@ export class WalletService {
 
         const reversalTransaction = await tx.transaction.create({
           data: {
-            type: 'REVERSAL',
-            status: 'COMPLETED',
+            type: TransactionType.REVERSAL,
+            status: TransactionStatus.COMPLETED,
             amountCents: originalTx.amountCents,
             description: `Estorno de transferência (${reason})`,
             senderWalletId: originalTx.receiverWalletId,
@@ -366,4 +368,3 @@ export class WalletService {
     });
   }
 }
-
