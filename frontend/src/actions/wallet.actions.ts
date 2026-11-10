@@ -1,0 +1,148 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { ApiClientError, apiRequest } from '@/lib/api';
+import { parseCurrencyInputToCents } from '@/lib/formatters';
+import { ActionState } from '@/types/wallet';
+
+/**
+ * Processes a wallet deposit request, converting BRL input to integer cents and revalidating the dashboard.
+ */
+export async function depositAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const rawAmount = String(formData.get('amount') || '');
+  const description = String(formData.get('description') || '').trim();
+  const amountCents = parseCurrencyInputToCents(rawAmount);
+
+  if (amountCents <= 0) {
+    return {
+      success: false,
+      message: 'Informe um valor válido maior que R$ 0,00 (ex: 150,00).',
+    };
+  }
+
+  try {
+    await apiRequest('/wallet/deposit', {
+      method: 'POST',
+      body: JSON.stringify({
+        amountCents,
+        description: description || undefined,
+      }),
+    });
+
+    revalidatePath('/dashboard');
+
+    return {
+      success: true,
+      message: 'Depósito realizado e saldo atualizado com sucesso!',
+    };
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      return { success: false, message: error.message };
+    }
+    return {
+      success: false,
+      message: 'Erro ao processar o depósito.',
+    };
+  }
+}
+
+/**
+ * Processes a peer-to-peer transfer request and revalidates the dashboard cache upon completion.
+ */
+export async function transferAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const recipientIdentifier = String(
+    formData.get('recipientIdentifier') || '',
+  ).trim();
+  const rawAmount = String(formData.get('amount') || '');
+  const description = String(formData.get('description') || '').trim();
+  const amountCents = parseCurrencyInputToCents(rawAmount);
+
+  if (!recipientIdentifier) {
+    return {
+      success: false,
+      message: 'Informe o e-mail ou CPF do destinatário.',
+    };
+  }
+
+  if (amountCents <= 0) {
+    return {
+      success: false,
+      message: 'Informe um valor de transferência válido maior que R$ 0,00.',
+    };
+  }
+
+  try {
+    await apiRequest('/wallet/transfer', {
+      method: 'POST',
+      body: JSON.stringify({
+        recipientIdentifier,
+        amountCents,
+        description: description || undefined,
+      }),
+    });
+
+    revalidatePath('/dashboard');
+
+    return {
+      success: true,
+      message: 'Transferência enviada com sucesso!',
+    };
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      return { success: false, message: error.message };
+    }
+    return {
+      success: false,
+      message: 'Erro ao processar a transferência.',
+    };
+  }
+}
+
+/**
+ * Requests an atomic reversal for a completed deposit or transfer transaction.
+ */
+export async function reverseTransactionAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const transactionId = String(formData.get('transactionId') || '').trim();
+  const reason = String(formData.get('reason') || '').trim();
+
+  if (!transactionId) {
+    return {
+      success: false,
+      message: 'Identificador da transação inválido.',
+    };
+  }
+
+  try {
+    await apiRequest(`/wallet/transactions/${transactionId}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({
+        reason: reason || undefined,
+      }),
+    });
+
+    revalidatePath('/dashboard');
+
+    return {
+      success: true,
+      message: 'Operação revertida e saldos estornados com sucesso!',
+    };
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      return { success: false, message: error.message };
+    }
+    return {
+      success: false,
+      message: 'Não foi possível reverter esta operação.',
+    };
+  }
+}
+
