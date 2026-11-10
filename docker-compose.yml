@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cobuccio-wallet-api
+    restart: unless-stopped
+    ports:
+      - "3333:3333"
+    environment:
+      PORT: 3333
+      DATABASE_URL: "file:./prod.db"
+      JWT_SECRET: "9e84a642f98739e3e9ce45286e2e2bedc638a6fdb22dba5b5c688c0cef6692fd4510701a9b71bfa9495a11f92ca18591877c1cc64c6466dd4da52f1a5374c9f8"
+      JWT_EXPIRES_IN: "1d"
+      FRONTEND_URL: "http://localhost:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3333/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cobuccio-wallet-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: "http://backend:3333/api"
+    depends_on:
+      backend:
+        condition: service_healthy
+
