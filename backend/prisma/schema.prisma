@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  cpf          String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  wallet       Wallet?
+
+  @@map("users")
+}
+
+model Wallet {
+  id                   String        @id @default(uuid())
+  userId               String        @unique
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balanceCents         Int           @default(0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  sentTransactions     Transaction[] @relation("SenderWallet")
+  receivedTransactions Transaction[] @relation("ReceiverWallet")
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id                    String       @id @default(uuid())
+  type                  String       // DEPOSIT | TRANSFER | REVERSAL
+  status                String       @default("COMPLETED") // COMPLETED | REVERSED | FAILED
+  amountCents           Int
+  description           String?
+  senderWalletId        String?
+  senderWallet          Wallet?      @relation("SenderWallet", fields: [senderWalletId], references: [id])
+  receiverWalletId      String
+  receiverWallet        Wallet       @relation("ReceiverWallet", fields: [receiverWalletId], references: [id])
+  originalTransactionId String?      @unique
+  originalTransaction   Transaction? @relation("TransactionReversal", fields: [originalTransactionId], references: [id])
+  reversalTransaction   Transaction? @relation("TransactionReversal")
+  reversalReason        String?
+  createdAt             DateTime     @default(now())
+  reversedAt            DateTime?
+
+  @@index([senderWalletId])
+  @@index([receiverWalletId])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
