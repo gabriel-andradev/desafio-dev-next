@@ -44,14 +44,20 @@ export function parseCurrencyInputToCents(rawInput: string): number {
 }
 
 /**
- * Formats an 11-digit numeric string into the standard CPF mask (000.000.000-00).
+ * Formats a numeric string progressively or completely into standard CPF mask (000.000.000-00).
  */
 export function formatCpf(cpf: string): string {
-  const digits = cpf.replace(/\D/g, '');
-  if (digits.length !== 11) {
-    return cpf;
+  const digits = cpf.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) {
+    return digits;
   }
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  if (digits.length <= 6) {
+    return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  }
+  if (digits.length <= 9) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  }
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
 }
 
 /**

@@ -36,6 +36,15 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
     it('should apply standard mask to 11-digit CPF', () => {
       expect(formatCpf('12345678901')).toBe('123.456.789-01');
     });
+
+    it('should progressively format CPF while typing', () => {
+      expect(formatCpf('123')).toBe('123');
+      expect(formatCpf('1234')).toBe('123.4');
+      expect(formatCpf('123456')).toBe('123.456');
+      expect(formatCpf('1234567')).toBe('123.456.7');
+      expect(formatCpf('1234567890')).toBe('123.456.789-0');
+      expect(formatCpf('12345678901999')).toBe('123.456.789-01');
+    });
   });
 });
 
