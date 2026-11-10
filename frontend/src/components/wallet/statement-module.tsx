@@ -139,7 +139,9 @@ export function StatementModule({ transactions }: StatementModuleProps) {
                         {tx.description || tx.type}
                       </div>
                       <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-0.5">
-                        <span>{formatDateTime(tx.createdAt)}</span>
+                        <span suppressHydrationWarning>
+                          {formatDateTime(tx.createdAt)}
+                        </span>
                         <span>•</span>
                         <span>
                           {tx.type === 'DEPOSIT'
@@ -161,6 +163,7 @@ export function StatementModule({ transactions }: StatementModuleProps) {
 
                   <div className="flex items-center gap-3">
                     <span
+                      suppressHydrationWarning
                       className={`font-mono text-sm font-bold ${
                         isReversed
                           ? 'line-through text-slate-400'
@@ -205,6 +208,7 @@ export function StatementModule({ transactions }: StatementModuleProps) {
                       id={`reason-${tx.id}`}
                       type="text"
                       name="reason"
+                      maxLength={140}
                       placeholder="Ex: Valor digitado incorretamente"
                       className="flex-1 min-w-[200px] px-3 py-1.5 rounded border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-brand-navy"
                     />

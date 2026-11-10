@@ -9,6 +9,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'America/Sao_Paulo',
 });
 
 /**
@@ -58,6 +59,69 @@ export function formatCpf(cpf: string): string {
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   }
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+}
+
+/**
+ * Formats a raw numeric/digit string into formatted BRL currency representation (e.g. "1.250,50").
+ * Strips any non-digit character and treats numbers from right-to-left in cents.
+ */
+export function formatCurrencyInput(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) {
+    return '';
+  }
+  const cents = parseInt(digits, 10);
+  if (cents === 0) {
+    return '0,00';
+  }
+  return (cents / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Validates whether a keypress corresponds to an allowed navigation, shortcut, or numeric key.
+ */
+export function isAllowedNumericKey(key: string, ctrlOrMeta: boolean): boolean {
+  if (
+    [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ].includes(key) ||
+    ctrlOrMeta
+  ) {
+    return true;
+  }
+  return /^\d$/.test(key);
+}
+
+/**
+ * Formats recipient input: if user types numbers, applies progressive CPF mask;
+ * if letters or '@' are present, preserves as clean email.
+ */
+export function formatRecipientInput(value: string): string {
+  const trimmed = value.trim();
+  if (/[a-zA-Z@]/.test(trimmed)) {
+    return trimmed;
+  }
+  return formatCpf(trimmed);
+}
+
+/**
+ * Validates whether a string matches a standard email format.
+ */
+export function isValidEmail(email: string): boolean {
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim());
 }
 
 /**

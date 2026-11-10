@@ -5,6 +5,8 @@ import { AlertCircle, CheckCircle2, PlusCircle } from 'lucide-react';
 import { depositAction } from '@/actions/wallet.actions';
 import {
   formatCurrencyFromCents,
+  formatCurrencyInput,
+  isAllowedNumericKey,
   parseCurrencyInputToCents,
 } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
@@ -83,10 +85,16 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
               id="deposit-amount"
               name="amount"
               type="text"
+              inputMode="numeric"
               required
               value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-              placeholder="Ex: 150,00"
+              onKeyDown={(e) => {
+                if (!isAllowedNumericKey(e.key, e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                }
+              }}
+              onChange={(e) => setAmountInput(formatCurrencyInput(e.target.value))}
+              placeholder="0,00"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-mono text-base focus:outline-none focus:border-brand-navy"
             />
           </div>
@@ -132,6 +140,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
             <div className="flex justify-between">
               <span className="text-slate-300">Saldo Atual:</span>
               <span
+                suppressHydrationWarning
                 className={`font-mono font-semibold ${
                   currentBalanceCents < 0 ? 'text-rose-400' : 'text-white'
                 }`}
@@ -141,7 +150,10 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-300">Valor do Depósito:</span>
-              <span className="font-mono font-semibold text-emerald-400">
+              <span
+                suppressHydrationWarning
+                className="font-mono font-semibold text-emerald-400"
+              >
                 + {formatCurrencyFromCents(previewDepositCents)}
               </span>
             </div>
@@ -152,6 +164,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
               Saldo Previsto Após Confirmação:
             </div>
             <div
+              suppressHydrationWarning
               className={`text-xl font-bold font-mono mt-0.5 ${
                 projectedBalanceCents < 0
                   ? 'text-rose-400'

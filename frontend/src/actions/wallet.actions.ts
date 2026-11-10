@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { ApiClientError, apiRequest } from '@/lib/api';
-import { parseCurrencyInputToCents } from '@/lib/formatters';
+import { isValidEmail, parseCurrencyInputToCents } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
 
 /**
@@ -68,6 +68,24 @@ export async function transferAction(
       success: false,
       message: 'Informe o e-mail ou CPF do destinatário.',
     };
+  }
+
+  const isEmail = recipientIdentifier.includes('@');
+  if (isEmail) {
+    if (!isValidEmail(recipientIdentifier)) {
+      return {
+        success: false,
+        message: 'Informe um endereço de e-mail válido (ex: destinatario@cobuccio.com).',
+      };
+    }
+  } else {
+    const digits = recipientIdentifier.replace(/\D/g, '');
+    if (digits.length !== 11) {
+      return {
+        success: false,
+        message: 'Informe um e-mail válido ou um CPF de 11 dígitos numéricos.',
+      };
+    }
   }
 
   if (amountCents <= 0) {

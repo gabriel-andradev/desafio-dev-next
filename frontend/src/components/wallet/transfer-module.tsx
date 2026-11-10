@@ -3,7 +3,14 @@
 import { useActionState, useState } from 'react';
 import { AlertCircle, CheckCircle2, Send, UserCheck } from 'lucide-react';
 import { transferAction } from '@/actions/wallet.actions';
-import { formatCpf, formatCurrencyFromCents } from '@/lib/formatters';
+import {
+  formatCpf,
+  formatCurrencyFromCents,
+  formatCurrencyInput,
+  formatRecipientInput,
+  isAllowedNumericKey,
+  isValidEmail,
+} from '@/lib/formatters';
 import { ActionState, UserParticipant } from '@/types/wallet';
 
 interface TransferModuleProps {
@@ -16,6 +23,56 @@ const initialState: ActionState = {
   message: '',
 };
 
+interface RecipientStatusHintProps {
+  value: string;
+}
+
+/**
+ * Renders real-time contextual validation hints for email or CPF recipient inputs.
+ */
+function RecipientStatusHint({ value }: RecipientStatusHintProps) {
+  if (!value) {
+    return null;
+  }
+
+  if (value.includes('@')) {
+    const valid = isValidEmail(value);
+    return (
+      <span
+        className={
+          valid
+            ? 'text-emerald-600 font-semibold'
+            : 'text-amber-600 font-semibold'
+        }
+      >
+        {valid
+          ? '✓ Formato de e-mail válido'
+          : 'Aguardando formato completo (ex: nome@dominio.com)'}
+      </span>
+    );
+  }
+
+  if (/^\d/.test(value)) {
+    const digitCount = value.replace(/\D/g, '').length;
+    const isComplete = digitCount === 11;
+    return (
+      <span
+        className={
+          isComplete
+            ? 'text-emerald-600 font-semibold'
+            : 'text-slate-500 font-medium'
+        }
+      >
+        {isComplete
+          ? '✓ CPF com 11 dígitos'
+          : `Dígitos de CPF: ${digitCount}/11`}
+      </span>
+    );
+  }
+
+  return null;
+}
+
 /**
  * Renders the peer-to-peer Transfer module with quick recipient selection and atomic balance validation.
  */
@@ -24,6 +81,7 @@ export function TransferModule({
   recipients,
 }: TransferModuleProps) {
   const [recipientInput, setRecipientInput] = useState('');
+  const [amount, setAmount] = useState('');
   const [state, formAction, isPending] = useActionState(
     transferAction,
     initialState,
@@ -45,6 +103,7 @@ export function TransferModule({
         <div className="px-3.5 py-2 rounded-lg bg-brand-navy text-white border border-brand-gold/40 text-xs">
           <span className="text-slate-300 mr-2">Saldo Disponível:</span>
           <span
+            suppressHydrationWarning
             className={`font-mono font-bold ${
               currentBalanceCents < 0 ? 'text-rose-400' : 'text-brand-gold'
             }`}
@@ -90,10 +149,18 @@ export function TransferModule({
               type="text"
               required
               value={recipientInput}
-              onChange={(e) => setRecipientInput(e.target.value)}
+              onChange={(e) =>
+                setRecipientInput(formatRecipientInput(e.target.value))
+              }
               placeholder="Ex: bruno@cobuccio.com ou 000.000.000-00"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-brand-navy"
             />
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+              <span className="text-slate-500">
+                Informe o e-mail cadastrado ou CPF do titular.
+              </span>
+              <RecipientStatusHint value={recipientInput} />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -108,8 +175,16 @@ export function TransferModule({
                 id="transfer-amount"
                 name="amount"
                 type="text"
+                inputMode="numeric"
                 required
-                placeholder="Ex: 80,00"
+                value={amount}
+                onKeyDown={(e) => {
+                  if (!isAllowedNumericKey(e.key, e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => setAmount(formatCurrencyInput(e.target.value))}
+                placeholder="0,00"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-mono text-sm focus:outline-none focus:border-brand-navy"
               />
             </div>

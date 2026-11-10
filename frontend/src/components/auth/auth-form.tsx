@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
 import { loginAction, registerAction } from '@/actions/auth.actions';
-import { formatCpf } from '@/lib/formatters';
+import { formatCpf, isAllowedNumericKey } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
 
 interface AuthFormProps {
@@ -125,8 +125,14 @@ export function AuthForm({ mode }: AuthFormProps) {
                   id="cpf"
                   name="cpf"
                   type="text"
+                  inputMode="numeric"
                   required
                   value={cpf}
+                  onKeyDown={(e) => {
+                    if (!isAllowedNumericKey(e.key, e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                    }
+                  }}
                   onChange={(e) => setCpf(formatCpf(e.target.value))}
                   maxLength={14}
                   placeholder="000.000.000-00"

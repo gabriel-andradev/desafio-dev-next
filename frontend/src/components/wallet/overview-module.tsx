@@ -79,6 +79,7 @@ export function OverviewModule({
             </button>
           </div>
           <div
+            suppressHydrationWarning
             className={`text-2xl font-bold font-mono ${
               summary.isNegative ? 'text-rose-400' : 'text-brand-gold'
             }`}
@@ -93,7 +94,10 @@ export function OverviewModule({
           <div className="text-xs text-slate-500 font-medium">
             Total de Depósitos Ativos
           </div>
-          <div className="text-xl font-bold font-mono text-emerald-600">
+          <div
+            suppressHydrationWarning
+            className="text-xl font-bold font-mono text-emerald-600"
+          >
             {hideBalance
               ? 'R$ ••••••'
               : `+ ${formatCurrencyFromCents(totalDepositsCents)}`}
@@ -104,7 +108,10 @@ export function OverviewModule({
           <div className="text-xs text-slate-500 font-medium">
             Total de Transferências Enviadas
           </div>
-          <div className="text-xl font-bold font-mono text-rose-600">
+          <div
+            suppressHydrationWarning
+            className="text-xl font-bold font-mono text-rose-600"
+          >
             {hideBalance
               ? 'R$ ••••••'
               : `- ${formatCurrencyFromCents(totalSentCents)}`}
@@ -188,11 +195,15 @@ export function OverviewModule({
                   >
                     {tx.description || tx.type}
                   </span>
-                  <span className="text-slate-400 ml-2">
+                  <span
+                    suppressHydrationWarning
+                    className="text-slate-400 ml-2"
+                  >
                     {formatDateTime(tx.createdAt)}
                   </span>
                 </div>
                 <span
+                  suppressHydrationWarning
                   className={`font-mono font-bold ${
                     tx.status === 'REVERSED'
                       ? 'line-through text-slate-400'

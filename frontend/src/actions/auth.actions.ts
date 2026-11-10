@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AUTH_COOKIE_NAME, ApiClientError, apiRequest } from '@/lib/api';
+import { isValidEmail } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
 
 interface AuthApiResponse {
@@ -25,6 +26,13 @@ export async function loginAction(
     return {
       success: false,
       message: 'Preencha o e-mail e a senha para continuar.',
+    };
+  }
+
+  if (!isValidEmail(email)) {
+    return {
+      success: false,
+      message: 'Informe um endereço de e-mail válido (ex: seu.nome@dominio.com).',
     };
   }
 
@@ -70,6 +78,20 @@ export async function registerAction(
     return {
       success: false,
       message: 'Todos os campos são obrigatórios para abertura da conta.',
+    };
+  }
+
+  if (cpf.length !== 11) {
+    return {
+      success: false,
+      message: 'O CPF deve conter exatamente 11 dígitos numéricos.',
+    };
+  }
+
+  if (!isValidEmail(email)) {
+    return {
+      success: false,
+      message: 'Informe um endereço de e-mail válido (ex: seu.nome@dominio.com).',
     };
   }
 

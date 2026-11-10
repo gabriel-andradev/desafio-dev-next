@@ -1,6 +1,10 @@
 import {
   formatCpf,
   formatCurrencyFromCents,
+  formatCurrencyInput,
+  formatRecipientInput,
+  isAllowedNumericKey,
+  isValidEmail,
   parseCurrencyInputToCents,
 } from './formatters';
 
@@ -29,6 +33,61 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
       expect(parseCurrencyInputToCents('')).toBe(0);
       expect(parseCurrencyInputToCents('-50,00')).toBe(0);
       expect(parseCurrencyInputToCents('abc')).toBe(0);
+    });
+  });
+
+  describe('formatCurrencyInput', () => {
+    it('should format raw digits into cent-based BRL currency format', () => {
+      expect(formatCurrencyInput('')).toBe('');
+      expect(formatCurrencyInput('5')).toBe('0,05');
+      expect(formatCurrencyInput('50')).toBe('0,50');
+      expect(formatCurrencyInput('500')).toBe('5,00');
+      expect(formatCurrencyInput('5000')).toBe('50,00');
+      expect(formatCurrencyInput('125050')).toBe('1.250,50');
+    });
+
+    it('should automatically strip letters and invalid characters', () => {
+      expect(formatCurrencyInput('5hgh4y')).toBe('0,54');
+      expect(formatCurrencyInput('abc')).toBe('');
+    });
+  });
+
+  describe('formatRecipientInput', () => {
+    it('should apply CPF mask when only digits are entered', () => {
+      expect(formatRecipientInput('12345678901')).toBe('123.456.789-01');
+    });
+
+    it('should preserve email as-is without applying CPF formatting', () => {
+      expect(formatRecipientInput('bruno@cobuccio.com')).toBe('bruno@cobuccio.com');
+      expect(formatRecipientInput('  bruno@cobuccio.com  ')).toBe('bruno@cobuccio.com');
+    });
+  });
+
+  describe('isValidEmail', () => {
+    it('should validate valid email patterns', () => {
+      expect(isValidEmail('bruno@cobuccio.com')).toBe(true);
+      expect(isValidEmail('gabriel.andrade@empresa.com.br')).toBe(true);
+    });
+
+    it('should reject invalid email patterns', () => {
+      expect(isValidEmail('bruno@cobuccio')).toBe(false);
+      expect(isValidEmail('bruno')).toBe(false);
+      expect(isValidEmail('@dominio.com')).toBe(false);
+    });
+  });
+
+  describe('isAllowedNumericKey', () => {
+    it('should allow digits and control keys', () => {
+      expect(isAllowedNumericKey('5', false)).toBe(true);
+      expect(isAllowedNumericKey('Backspace', false)).toBe(true);
+      expect(isAllowedNumericKey('Tab', false)).toBe(true);
+      expect(isAllowedNumericKey('v', true)).toBe(true); // Ctrl+V
+    });
+
+    it('should block letters and special characters', () => {
+      expect(isAllowedNumericKey('a', false)).toBe(false);
+      expect(isAllowedNumericKey('h', false)).toBe(false);
+      expect(isAllowedNumericKey('!', false)).toBe(false);
     });
   });
 

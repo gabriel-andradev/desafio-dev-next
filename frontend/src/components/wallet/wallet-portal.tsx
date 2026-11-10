@@ -20,7 +20,15 @@ import { ModuleKey, OverviewModule } from './overview-module';
 interface WalletPortalProps {
   summary: WalletSummary;
   recipients: UserParticipant[];
+  initialTab?: string;
 }
+
+const VALID_MODULES: ModuleKey[] = [
+  'overview',
+  'deposit',
+  'transfer',
+  'statement',
+];
 
 const MODULE_ITEMS: { key: ModuleKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
@@ -32,8 +40,34 @@ const MODULE_ITEMS: { key: ModuleKey; label: string; icon: typeof LayoutDashboar
 /**
  * Renders the main banking portal shell with sidebar module navigation and active module view.
  */
-export function WalletPortal({ summary, recipients }: WalletPortalProps) {
-  const [activeModule, setActiveModule] = useState<ModuleKey>('overview');
+export function WalletPortal({
+  summary,
+  recipients,
+  initialTab,
+}: WalletPortalProps) {
+  const initialModule: ModuleKey =
+    initialTab && VALID_MODULES.includes(initialTab as ModuleKey)
+      ? (initialTab as ModuleKey)
+      : 'overview';
+
+  const [activeModule, setActiveModule] = useState<ModuleKey>(initialModule);
+
+  const handleSelectModule = (mod: ModuleKey) => {
+    setActiveModule(mod);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (mod === 'overview') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', mod);
+      }
+      window.history.replaceState(
+        null,
+        '',
+        url.pathname + (url.search ? url.search : ''),
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 grid grid-cols-1 md:grid-cols-12">
@@ -64,7 +98,7 @@ export function WalletPortal({ summary, recipients }: WalletPortalProps) {
                 <button
                   key={item.key}
                   type="button"
-                  onClick={() => setActiveModule(item.key)}
+                  onClick={() => handleSelectModule(item.key)}
                   className={`w-full text-left px-3 py-2.5 rounded-lg font-medium flex items-center gap-2.5 transition cursor-pointer ${
                     isSelected
                       ? 'bg-brand-navy text-brand-gold border border-brand-gold/40'
@@ -124,7 +158,7 @@ export function WalletPortal({ summary, recipients }: WalletPortalProps) {
 
             <button
               type="button"
-              onClick={() => setActiveModule('deposit')}
+              onClick={() => handleSelectModule('deposit')}
               className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition cursor-pointer"
             >
               Cobrir Saldo Agora
@@ -133,7 +167,7 @@ export function WalletPortal({ summary, recipients }: WalletPortalProps) {
         )}
 
         {activeModule === 'overview' && (
-          <OverviewModule summary={summary} onSelectModule={setActiveModule} />
+          <OverviewModule summary={summary} onSelectModule={handleSelectModule} />
         )}
 
         {activeModule === 'deposit' && (
