@@ -68,6 +68,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
             status: TransactionStatus.COMPLETED,
             senderWalletId: 'wallet-1',
             receiverWalletId: 'wallet-2',
+            createdAt: new Date(),
           },
           'wallet-outsider',
         ),
@@ -82,6 +83,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
             status: TransactionStatus.COMPLETED,
             senderWalletId: 'wallet-1',
             receiverWalletId: 'wallet-2',
+            createdAt: new Date(),
           },
           'wallet-1',
         ),
@@ -96,10 +98,121 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
             status: TransactionStatus.REVERSED,
             senderWalletId: 'wallet-1',
             receiverWalletId: 'wallet-2',
+            createdAt: new Date(),
           },
           'wallet-1',
         ),
       ).toThrow(ConflictException);
+    });
+
+    it('should allow sender to reverse transfer within 15 minutes repentance window', () => {
+      const now = new Date('2026-11-11T12:10:00Z');
+      const createdAt = new Date('2026-11-11T12:00:00Z'); // 10 minutes ago
+
+      expect(() =>
+        TransactionDomainRules.validateReversalPreconditions(
+          {
+            type: TransactionType.TRANSFER,
+            status: TransactionStatus.COMPLETED,
+            senderWalletId: 'wallet-1',
+            receiverWalletId: 'wallet-2',
+            createdAt,
+          },
+          'wallet-1',
+          now,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should reject sender reversing transfer after 15 minutes repentance window', () => {
+      const now = new Date('2026-11-11T12:20:00Z');
+      const createdAt = new Date('2026-11-11T12:00:00Z'); // 20 minutes ago
+
+      expect(() =>
+        TransactionDomainRules.validateReversalPreconditions(
+          {
+            type: TransactionType.TRANSFER,
+            status: TransactionStatus.COMPLETED,
+            senderWalletId: 'wallet-1',
+            receiverWalletId: 'wallet-2',
+            createdAt,
+          },
+          'wallet-1',
+          now,
+        ),
+      ).toThrow(BadRequestException);
+    });
+
+    it('should allow recipient to return transfer within 24 hours', () => {
+      const now = new Date('2026-11-11T20:00:00Z');
+      const createdAt = new Date('2026-11-11T12:00:00Z'); // 8 hours ago
+
+      expect(() =>
+        TransactionDomainRules.validateReversalPreconditions(
+          {
+            type: TransactionType.TRANSFER,
+            status: TransactionStatus.COMPLETED,
+            senderWalletId: 'wallet-1',
+            receiverWalletId: 'wallet-2',
+            createdAt,
+          },
+          'wallet-2',
+          now,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should reject recipient returning transfer after 24 hours', () => {
+      const now = new Date('2026-11-12T13:00:00Z');
+      const createdAt = new Date('2026-11-11T12:00:00Z'); // 25 hours ago
+
+      expect(() =>
+        TransactionDomainRules.validateReversalPreconditions(
+          {
+            type: TransactionType.TRANSFER,
+            status: TransactionStatus.COMPLETED,
+            senderWalletId: 'wallet-1',
+            receiverWalletId: 'wallet-2',
+            createdAt,
+          },
+          'wallet-2',
+          now,
+        ),
+      ).toThrow(BadRequestException);
+    });
+
+    it('should reject non-owner reversing a deposit', () => {
+      expect(() =>
+        TransactionDomainRules.validateReversalPreconditions(
+          {
+            type: TransactionType.DEPOSIT,
+            status: TransactionStatus.COMPLETED,
+            senderWalletId: null,
+            receiverWalletId: 'wallet-1',
+            createdAt: new Date(),
+          },
+          'wallet-other',
+        ),
+      ).toThrow(ForbiddenException);
+    });
+
+    it('should reject deposit owner reversing after 24 hours', () => {
+      const now = new Date('2026-11-12T13:00:00Z');
+      const createdAt = new Date('2026-11-11T12:00:00Z'); // 25 hours ago
+
+      expect(() =>
+        TransactionDomainRules.validateReversalPreconditions(
+          {
+            type: TransactionType.DEPOSIT,
+            status: TransactionStatus.COMPLETED,
+            senderWalletId: null,
+            receiverWalletId: 'wallet-1',
+            createdAt,
+          },
+          'wallet-1',
+          now,
+        ),
+      ).toThrow(BadRequestException);
     });
   });
 });

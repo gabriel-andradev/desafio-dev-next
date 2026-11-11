@@ -19,5 +19,9 @@ export class DepositDto {
   @IsString({ message: 'A descrição deve ser um texto válido.' })
   @MaxLength(140, { message: 'A descrição deve ter no máximo 140 caracteres.' })
   description?: string;
+
+  @IsOptional()
+  @IsString({ message: 'A chave de idempotência deve ser uma string válida.' })
+  idempotencyKey?: string;
 }
 

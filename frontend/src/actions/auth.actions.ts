@@ -46,6 +46,7 @@ export async function loginAction(
     cookieStore.set(AUTH_COOKIE_NAME, response.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: COOKIE_MAX_AGE_SECONDS,
     });
@@ -105,6 +106,7 @@ export async function registerAction(
     cookieStore.set(AUTH_COOKIE_NAME, response.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: COOKIE_MAX_AGE_SECONDS,
     });

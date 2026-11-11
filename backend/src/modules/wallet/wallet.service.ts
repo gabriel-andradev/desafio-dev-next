@@ -106,14 +106,37 @@ export class WalletService {
       canReverse:
         tx.status === TransactionStatus.COMPLETED &&
         tx.type !== TransactionType.REVERSAL &&
-        !tx.reversalTransaction,
+        !tx.reversalTransaction &&
+        TransactionDomainRules.isEligibleForReversal(tx, walletId),
     }));
   }
 
   /**
    * Credits the user's wallet balance atomically and records a DEPOSIT ledger entry.
+   * Supports idempotent replay via optional idempotencyKey.
    */
-  async deposit(userId: string, dto: DepositDto) {
+  async deposit(userId: string, dto: DepositDto, idempotencyKey?: string) {
+    const key = idempotencyKey?.trim() || dto.idempotencyKey?.trim();
+
+    if (key) {
+      const existingTx = await this.prisma.transaction.findUnique({
+        where: { idempotencyKey: key },
+      });
+
+      if (existingTx) {
+        const wallet = await this.prisma.wallet.findUnique({
+          where: { userId },
+        });
+
+        return {
+          transaction: existingTx,
+          previousBalanceCents: wallet?.balanceCents ?? 0,
+          newBalanceCents: wallet?.balanceCents ?? 0,
+          isIdempotentReplay: true,
+        };
+      }
+    }
+
     const money = Money.fromCents(dto.amountCents);
 
     return this.prisma.$transaction(async (tx) => {
@@ -141,6 +164,7 @@ export class WalletService {
           amountCents: money.valueInCents,
           description: dto.description?.trim() || 'Depósito em carteira',
           receiverWalletId: wallet.id,
+          idempotencyKey: key || undefined,
         },
       });
 
@@ -148,14 +172,36 @@ export class WalletService {
         transaction,
         previousBalanceCents,
         newBalanceCents: updatedWallet.balanceCents,
+        isIdempotentReplay: false,
       };
     });
   }
 
   /**
    * Validates recipient and balance via domain rules, debits sender, credits receiver, and logs the TRANSFER atomically.
+   * Supports idempotent replay via optional idempotencyKey.
    */
-  async transfer(senderUserId: string, dto: TransferDto) {
+  async transfer(senderUserId: string, dto: TransferDto, idempotencyKey?: string) {
+    const key = idempotencyKey?.trim() || dto.idempotencyKey?.trim();
+
+    if (key) {
+      const existingTx = await this.prisma.transaction.findUnique({
+        where: { idempotencyKey: key },
+      });
+
+      if (existingTx) {
+        const senderWallet = await this.prisma.wallet.findUnique({
+          where: { userId: senderUserId },
+        });
+
+        return {
+          transaction: existingTx,
+          newBalanceCents: senderWallet?.balanceCents ?? 0,
+          isIdempotentReplay: true,
+        };
+      }
+    }
+
     const money = Money.fromCents(dto.amountCents);
 
     const recipientUser = await this.usersService.findByEmailOrCpf(
@@ -229,12 +275,14 @@ export class WalletService {
             `Transferência para ${recipientUser.name}`,
           senderWalletId: senderWallet.id,
           receiverWalletId: recipientWalletId,
+          idempotencyKey: key || undefined,
         },
       });
 
       return {
         transaction,
         newBalanceCents: updatedSenderWallet.balanceCents,
+        isIdempotentReplay: false,
       };
     });
   }

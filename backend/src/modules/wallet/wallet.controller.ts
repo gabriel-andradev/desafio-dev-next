@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -9,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { WalletService } from './wallet.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -38,24 +40,31 @@ export class WalletController {
     return this.walletService.listTransactions(user.walletId);
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('deposit')
   @ApiOperation({ summary: 'Realiza depósito em centavos na carteira do usuário' })
   async deposit(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DepositDto,
+    @Headers('x-idempotency-key') headerIdempotencyKey?: string,
   ) {
-    return this.walletService.deposit(user.id, dto);
+    const idempotencyKey = headerIdempotencyKey || dto.idempotencyKey;
+    return this.walletService.deposit(user.id, dto, idempotencyKey);
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('transfer')
   @ApiOperation({ summary: 'Transfere saldo de forma atômica para outro usuário via e-mail ou CPF' })
   async transfer(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: TransferDto,
+    @Headers('x-idempotency-key') headerIdempotencyKey?: string,
   ) {
-    return this.walletService.transfer(user.id, dto);
+    const idempotencyKey = headerIdempotencyKey || dto.idempotencyKey;
+    return this.walletService.transfer(user.id, dto, idempotencyKey);
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('transactions/:id/reverse')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicita a reversão atômica de um depósito ou transferência' })

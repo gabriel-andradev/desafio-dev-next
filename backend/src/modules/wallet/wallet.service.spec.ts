@@ -115,6 +115,31 @@ describe('WalletService', () => {
       expect(result.previousBalanceCents).toBe(-5000);
       expect(result.newBalanceCents).toBe(7000);
     });
+
+    it('should return cached transaction without updating balance when idempotency key is repeated', async () => {
+      mockPrismaService.transaction.findUnique.mockResolvedValue({
+        id: 'tx-existing',
+        type: 'DEPOSIT',
+        status: 'COMPLETED',
+        amountCents: 15000,
+        idempotencyKey: 'idemp-key-1',
+      });
+
+      mockPrismaService.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 25000,
+      });
+
+      const result = await service.deposit(
+        'user-1',
+        { amountCents: 15000 },
+        'idemp-key-1',
+      );
+
+      expect(result.transaction.id).toBe('tx-existing');
+      expect(result.isIdempotentReplay).toBe(true);
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('transfer', () => {
@@ -196,6 +221,34 @@ describe('WalletService', () => {
         data: { balanceCents: { increment: 5000 } },
       });
     });
+
+    it('should return cached transaction without debiting balance when transfer idempotency key is replayed', async () => {
+      mockPrismaService.transaction.findUnique.mockResolvedValue({
+        id: 'tx-existing-transfer',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        amountCents: 5000,
+        idempotencyKey: 'idemp-tx-1',
+      });
+
+      mockPrismaService.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 8000,
+      });
+
+      const result = await service.transfer(
+        'user-1',
+        {
+          recipientIdentifier: 'bob@email.com',
+          amountCents: 5000,
+        },
+        'idemp-tx-1',
+      );
+
+      expect(result.transaction.id).toBe('tx-existing-transfer');
+      expect(result.isIdempotentReplay).toBe(true);
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('reverseTransaction', () => {
@@ -212,6 +265,7 @@ describe('WalletService', () => {
         amountCents: 5000,
         senderWalletId: 'wallet-1',
         receiverWalletId: 'wallet-2',
+        createdAt: new Date(),
       });
 
       await expect(
@@ -232,6 +286,7 @@ describe('WalletService', () => {
         amountCents: 5000,
         senderWalletId: 'wallet-1',
         receiverWalletId: 'wallet-2',
+        createdAt: new Date(),
       });
 
       await expect(
@@ -252,6 +307,7 @@ describe('WalletService', () => {
         amountCents: 5000,
         senderWalletId: 'wallet-1',
         receiverWalletId: 'wallet-2',
+        createdAt: new Date(),
       });
 
       mockTx.transaction.updateMany.mockResolvedValue({ count: 1 });

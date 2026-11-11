@@ -24,11 +24,16 @@ export async function depositAction(
   }
 
   try {
+    const idempotencyKey = crypto.randomUUID();
     await apiRequest('/wallet/deposit', {
       method: 'POST',
+      headers: {
+        'x-idempotency-key': idempotencyKey,
+      },
       body: JSON.stringify({
         amountCents,
         description: description || undefined,
+        idempotencyKey,
       }),
     });
 
@@ -96,12 +101,17 @@ export async function transferAction(
   }
 
   try {
+    const idempotencyKey = crypto.randomUUID();
     await apiRequest('/wallet/transfer', {
       method: 'POST',
+      headers: {
+        'x-idempotency-key': idempotencyKey,
+      },
       body: JSON.stringify({
         recipientIdentifier,
         amountCents,
         description: description || undefined,
+        idempotencyKey,
       }),
     });
 

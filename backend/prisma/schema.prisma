@@ -47,6 +47,7 @@ model Transaction {
   originalTransaction   Transaction? @relation("TransactionReversal", fields: [originalTransactionId], references: [id])
   reversalTransaction   Transaction? @relation("TransactionReversal")
   reversalReason        String?
+  idempotencyKey        String?      @unique
   createdAt             DateTime     @default(now())
   reversedAt            DateTime?
 
