@@ -109,6 +109,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   type="text"
                   required
                   minLength={3}
+                  maxLength={100}
                   placeholder="Ex: Gabriel Silva"
                   className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
                 />
@@ -165,14 +166,16 @@ export function AuthForm({ mode }: AuthFormProps) {
                 htmlFor="password"
                 className="block text-xs font-medium text-slate-300 mb-1.5"
               >
-                Senha {isLogin ? '' : '(mín. 6 caracteres)'}
+                Senha {isLogin ? '' : '(mín. 8 caracteres)'}
               </label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={isLogin ? undefined : 8}
+                maxLength={72}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
                 placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
               />

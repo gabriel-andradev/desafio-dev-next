@@ -34,7 +34,7 @@ export class RegisterDto {
 
   @IsString({ message: 'A senha deve ser um texto válido.' })
   @IsNotEmpty({ message: 'A senha é obrigatória.' })
-  @MinLength(6, { message: 'A senha deve ter pelo menos 6 caracteres.' })
+  @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres.' })
   @MaxLength(72, { message: 'A senha deve ter no máximo 72 caracteres.' })
   password!: string;
 }

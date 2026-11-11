@@ -49,7 +49,7 @@ npm run dev
 
 ## 2. Contas de demonstração
 
-Criadas pelo seed (mesmas contas da versão PHP). Senha de todas: `password123`.
+Criadas pelo seed. Senha de todas: `password123`.
 
 | Titular | E-mail | CPF | Saldo inicial | Para que serve |
 | :--- | :--- | :--- | :--- | :--- |
@@ -65,6 +65,7 @@ Estas regras são as mesmas na versão PHP.
 
 **Cadastro e acesso**
 - E-mail e CPF são únicos. O cadastro cria o usuário e a carteira (saldo zero) na mesma transação.
+- Nome de 3 a 100 caracteres; senha de 8 a 72 caracteres (o limite de 72 é o máximo que o bcrypt considera).
 - Falha de login retorna mensagem genérica, sem revelar se o e-mail existe.
 
 **Depósito**
@@ -161,12 +162,12 @@ Checagem de saldo e débito acontecem no mesmo `UPDATE`; se outra operação con
 ## 7. Testes e qualidade
 
 ```bash
-cd backend && npm test          # 29 testes unitários (domínio + serviços)
+cd backend && npm test          # 31 testes unitários (domínio, DTOs e serviços)
 cd backend && npm run test:e2e  # 5 testes de integração (Supertest)
 cd frontend && npm test         # 14 testes unitários (formatadores)
 ```
 
-**48 testes** no total. O frontend também foi auditado com `npx react-doctor@latest --verbose`.
+**50 testes** no total. O frontend também foi auditado com `npx react-doctor@latest --verbose`.
 
 ---
 
@@ -189,6 +190,6 @@ cd frontend && npm test         # 14 testes unitários (formatadores)
 | Autenticação | JWT em cookie `httpOnly` | Sessão Laravel + CSRF |
 | Gasto duplo | `UPDATE` condicional (`balanceCents >= valor`) | `SELECT ... FOR UPDATE` em ordem de ID |
 | Rate limit | `@nestjs/throttler` | `RateLimiter` + middleware `throttle` |
-| Testes | Jest + Supertest (48) | PHPUnit (40) + PHPStan nível 8 + Pint |
+| Testes | Jest + Supertest (50) | PHPUnit (41) + PHPStan nível 8 + Pint |
 
 Regras de negócio, prazos de estorno, limites de valor, idempotência, modelo de dados e contas de demonstração são os mesmos nas duas.

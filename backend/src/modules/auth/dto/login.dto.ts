@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class LoginDto {
@@ -11,7 +11,6 @@ export class LoginDto {
 
   @IsString({ message: 'A senha deve ser informada.' })
   @IsNotEmpty({ message: 'A senha é obrigatória.' })
-  @MinLength(6, { message: 'A senha deve ter pelo menos 6 caracteres.' })
   password!: string;
 }
 
