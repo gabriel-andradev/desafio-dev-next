@@ -17,6 +17,8 @@ export enum TransactionStatus {
   FAILED = 'FAILED',
 }
 
+export type ReversalState = 'AVAILABLE' | 'EXPIRED' | 'UNAVAILABLE';
+
 export interface ReversibilityCheckInput {
   type: string;
   status: string;
@@ -115,6 +117,30 @@ export class TransactionDomainRules {
         }
       }
     }
+  }
+
+  /**
+   * Classifies a transaction for the statement UI:
+   * - AVAILABLE: the wallet can reverse it right now;
+   * - EXPIRED: it would be reversible, but the time window has passed;
+   * - UNAVAILABLE: it can never be reversed by this wallet (already reversed, a reversal entry, not the owner...).
+   */
+  static getReversalState(
+    transaction: ReversibilityCheckInput,
+    requesterWalletId: string,
+    currentDate: Date = new Date(),
+  ): ReversalState {
+    if (this.isEligibleForReversal(transaction, requesterWalletId, currentDate)) {
+      return 'AVAILABLE';
+    }
+
+    const eligibleAtCreation = this.isEligibleForReversal(
+      transaction,
+      requesterWalletId,
+      new Date(transaction.createdAt),
+    );
+
+    return eligibleAtCreation ? 'EXPIRED' : 'UNAVAILABLE';
   }
 
   /**

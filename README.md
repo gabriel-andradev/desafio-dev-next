@@ -162,12 +162,12 @@ Checagem de saldo e débito acontecem no mesmo `UPDATE`; se outra operação con
 ## 7. Testes e qualidade
 
 ```bash
-cd backend && npm test          # 31 testes unitários (domínio, DTOs e serviços)
+cd backend && npm test          # 35 testes unitários (domínio, DTOs e serviços)
 cd backend && npm run test:e2e  # 5 testes de integração (Supertest)
 cd frontend && npm test         # 14 testes unitários (formatadores)
 ```
 
-**50 testes** no total. O frontend também foi auditado com `npx react-doctor@latest --verbose`.
+**54 testes** no total. O frontend também foi auditado com `npx react-doctor@latest --verbose`.
 
 ---
 
@@ -190,6 +190,6 @@ cd frontend && npm test         # 14 testes unitários (formatadores)
 | Autenticação | JWT em cookie `httpOnly` | Sessão Laravel + CSRF |
 | Gasto duplo | `UPDATE` condicional (`balanceCents >= valor`) | `SELECT ... FOR UPDATE` em ordem de ID |
 | Rate limit | `@nestjs/throttler` | `RateLimiter` + middleware `throttle` |
-| Testes | Jest + Supertest (50) | PHPUnit (41) + PHPStan nível 8 + Pint |
+| Testes | Jest + Supertest (54) | PHPUnit (45) + PHPStan nível 8 + Pint |
 
 Regras de negócio, prazos de estorno, limites de valor, idempotência, modelo de dados e contas de demonstração são os mesmos nas duas.

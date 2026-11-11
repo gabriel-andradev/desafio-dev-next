@@ -214,6 +214,46 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
         ),
       ).toThrow(BadRequestException);
     });
+
+    describe('getReversalState', () => {
+      const transfer = {
+        type: TransactionType.TRANSFER,
+        status: TransactionStatus.COMPLETED,
+        senderWalletId: 'wallet-1',
+        receiverWalletId: 'wallet-2',
+        createdAt: new Date('2026-11-11T12:00:00Z'),
+      };
+
+      it('should be AVAILABLE while the sender is inside the 15-minute window', () => {
+        const now = new Date('2026-11-11T12:10:00Z');
+
+        expect(TransactionDomainRules.getReversalState(transfer, 'wallet-1', now)).toBe('AVAILABLE');
+      });
+
+      it('should be EXPIRED once the sender window has passed', () => {
+        const now = new Date('2026-11-11T12:20:00Z');
+
+        expect(TransactionDomainRules.getReversalState(transfer, 'wallet-1', now)).toBe('EXPIRED');
+      });
+
+      it('should be UNAVAILABLE for an already reversed transaction', () => {
+        const now = new Date('2026-11-11T12:05:00Z');
+
+        expect(
+          TransactionDomainRules.getReversalState(
+            { ...transfer, status: TransactionStatus.REVERSED },
+            'wallet-1',
+            now,
+          ),
+        ).toBe('UNAVAILABLE');
+      });
+
+      it('should be UNAVAILABLE for a wallet that did not take part in the transaction', () => {
+        const now = new Date('2026-11-11T12:05:00Z');
+
+        expect(TransactionDomainRules.getReversalState(transfer, 'wallet-9', now)).toBe('UNAVAILABLE');
+      });
+    });
   });
 });
 

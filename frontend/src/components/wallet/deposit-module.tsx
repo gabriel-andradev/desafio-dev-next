@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { AlertCircle, CheckCircle2, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { depositAction } from '@/actions/wallet.actions';
 import {
   formatCurrencyFromCents,
@@ -10,6 +10,7 @@ import {
   parseCurrencyInputToCents,
 } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
+import { ActionAlert } from './action-alert';
 
 interface DepositModuleProps {
   currentBalanceCents: number;
@@ -27,10 +28,10 @@ const QUICK_AMOUNTS = [
 ];
 
 /**
- * Renders the Deposit module with real-time balance projection and negative balance recovery preview.
+ * Renders the Deposit module with a real-time balance projection and negative balance recovery preview.
  */
 export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
-  const [amountInput, setAmountInput] = useState('150,00');
+  const [amountInput, setAmountInput] = useState('');
   const [state, formAction, isPending] = useActionState(
     depositAction,
     initialState,
@@ -42,32 +43,14 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
   return (
     <section className="space-y-6">
       <header className="border-b border-slate-200 pb-4">
-        <h2 className="text-lg font-bold text-brand-navy">
-          Módulo: Depósito em Carteira
-        </h2>
+        <h2 className="text-lg font-bold text-brand-navy">Depositar</h2>
         <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-          Adicione saldo à sua conta. Caso seu saldo esteja negativo, o depósito
-          abate automaticamente o débito e acrescenta o valor excedente.
+          O valor entra na hora. Se o saldo estiver negativo, o depósito quita a
+          dívida primeiro e o restante fica disponível.
         </p>
       </header>
 
-      {state.message && (
-        <div
-          role="alert"
-          className={`flex items-center gap-2.5 p-3.5 rounded-lg border text-xs sm:text-sm ${
-            state.success
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
-          }`}
-        >
-          {state.success ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-          )}
-          <span>{state.message}</span>
-        </div>
-      )}
+      <ActionAlert state={state} />
 
       <form
         action={formAction}
@@ -79,7 +62,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
               htmlFor="deposit-amount"
               className="block text-xs font-semibold text-slate-700 mb-1.5"
             >
-              Valor do Aporte (R$)
+              Valor do depósito (R$)
             </label>
             <input
               id="deposit-amount"
@@ -118,7 +101,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
               htmlFor="deposit-description"
               className="block text-xs font-semibold text-slate-700 mb-1.5"
             >
-              Identificação / Descrição (opcional)
+              Descrição (opcional)
             </label>
             <input
               id="deposit-description"
@@ -133,12 +116,12 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
 
         <div className="lg:col-span-5 bg-brand-navy text-white p-5 rounded-xl border border-brand-gold/40 shadow-md space-y-4">
           <div className="text-xs uppercase tracking-wider text-brand-gold font-semibold">
-            Simulação Contábil em Tempo Real
+            Simulação do depósito
           </div>
 
           <div className="space-y-2 text-xs border-b border-white/10 pb-3">
             <div className="flex justify-between">
-              <span className="text-slate-300">Saldo Atual:</span>
+              <span className="text-slate-300">Saldo atual</span>
               <span
                 suppressHydrationWarning
                 className={`font-mono font-semibold ${
@@ -149,7 +132,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-300">Valor do Depósito:</span>
+              <span className="text-slate-300">Valor do depósito</span>
               <span
                 suppressHydrationWarning
                 className="font-mono font-semibold text-emerald-400"
@@ -160,15 +143,11 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
           </div>
 
           <div>
-            <div className="text-xs text-slate-300">
-              Saldo Previsto Após Confirmação:
-            </div>
+            <div className="text-xs text-slate-300">Saldo após o depósito</div>
             <div
               suppressHydrationWarning
               className={`text-xl font-bold font-mono mt-0.5 ${
-                projectedBalanceCents < 0
-                  ? 'text-rose-400'
-                  : 'text-brand-gold'
+                projectedBalanceCents < 0 ? 'text-rose-400' : 'text-brand-gold'
               }`}
             >
               {formatCurrencyFromCents(projectedBalanceCents)}
@@ -177,17 +156,14 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
 
           <button
             type="submit"
-            disabled={isPending}
-            className="w-full py-2.5 px-4 rounded-lg bg-brand-gold hover:bg-brand-goldLight disabled:opacity-60 text-brand-dark font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer"
+            disabled={isPending || previewDepositCents <= 0}
+            className="w-full py-2.5 px-4 rounded-lg bg-brand-gold hover:bg-brand-goldLight disabled:opacity-60 disabled:cursor-not-allowed text-brand-dark font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>
-              {isPending ? 'Creditando em conta...' : 'Confirmar Depósito'}
-            </span>
+            <span>{isPending ? 'Depositando...' : 'Confirmar depósito'}</span>
           </button>
         </div>
       </form>
     </section>
   );
 }
-

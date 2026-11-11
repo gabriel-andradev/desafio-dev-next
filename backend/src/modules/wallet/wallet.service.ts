@@ -110,25 +110,30 @@ export class WalletService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return transactions.map((tx) => ({
-      id: tx.id,
-      type: tx.type,
-      status: tx.status,
-      amountCents: tx.amountCents,
-      description: tx.description,
-      direction: tx.receiverWalletId === walletId ? 'IN' : 'OUT',
-      sender: tx.senderWallet?.user ?? null,
-      receiver: tx.receiverWallet.user,
-      originalTransactionId: tx.originalTransactionId,
-      reversalReason: tx.reversalReason,
-      createdAt: tx.createdAt,
-      reversedAt: tx.reversedAt,
-      canReverse:
-        tx.status === TransactionStatus.COMPLETED &&
-        tx.type !== TransactionType.REVERSAL &&
-        !tx.reversalTransaction &&
-        TransactionDomainRules.isEligibleForReversal(tx, walletId),
-    }));
+    return transactions.map((tx) => {
+      const reversalState = tx.reversalTransaction
+        ? 'UNAVAILABLE'
+        : TransactionDomainRules.getReversalState(tx, walletId);
+
+      return {
+        id: tx.id,
+        type: tx.type,
+        status: tx.status,
+        amountCents: tx.amountCents,
+        description: tx.description,
+        // Money leaves the wallet whenever it is the sender. This also covers a deposit reversal,
+        // whose sender and receiver are the same wallet and which is a debit.
+        direction: tx.senderWalletId === walletId ? 'OUT' : 'IN',
+        sender: tx.senderWallet?.user ?? null,
+        receiver: tx.receiverWallet.user,
+        originalTransactionId: tx.originalTransactionId,
+        reversalReason: tx.reversalReason,
+        createdAt: tx.createdAt,
+        reversedAt: tx.reversedAt,
+        reversalState,
+        canReverse: reversalState === 'AVAILABLE',
+      };
+    });
   }
 
   /**

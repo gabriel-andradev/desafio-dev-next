@@ -1,16 +1,11 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import {
-  AlertCircle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  CheckCircle2,
-  RotateCcw,
-} from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, RotateCcw } from 'lucide-react';
 import { reverseTransactionAction } from '@/actions/wallet.actions';
 import { formatCurrencyFromCents, formatDateTime } from '@/lib/formatters';
 import { ActionState, WalletTransaction } from '@/types/wallet';
+import { ActionAlert } from './action-alert';
 
 interface StatementModuleProps {
   transactions: WalletTransaction[];
@@ -18,13 +13,67 @@ interface StatementModuleProps {
 
 type FilterType = 'ALL' | 'DEPOSIT' | 'TRANSFER' | 'REVERSAL';
 
+const FILTERS: { key: FilterType; label: string }[] = [
+  { key: 'ALL', label: 'Todos' },
+  { key: 'DEPOSIT', label: 'Depósitos' },
+  { key: 'TRANSFER', label: 'Transferências' },
+  { key: 'REVERSAL', label: 'Estornos' },
+];
+
 const initialState: ActionState = {
   success: false,
   message: '',
 };
 
 /**
- * Renders the transaction ledger history with type filters and atomic reversal triggers.
+ * Short, human-friendly reference for a transaction UUID (the PHP version shows the numeric id).
+ */
+function shortReference(id: string): string {
+  return `#${id.slice(0, 8).toUpperCase()}`;
+}
+
+function StatusBadge({ tx }: { tx: WalletTransaction }) {
+  if (tx.type === 'REVERSAL') {
+    return (
+      <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 text-[11px] font-semibold">
+        Estorno
+      </span>
+    );
+  }
+
+  if (tx.status === 'REVERSED') {
+    return (
+      <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[11px] font-semibold">
+        Estornada
+      </span>
+    );
+  }
+
+  return (
+    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px] font-semibold">
+      Concluída
+    </span>
+  );
+}
+
+function counterpartLabel(tx: WalletTransaction): string {
+  if (tx.type === 'DEPOSIT') {
+    return 'Depósito em conta';
+  }
+
+  if (tx.type === 'REVERSAL') {
+    return tx.originalTransactionId
+      ? `Estorno da operação ${shortReference(tx.originalTransactionId)}`
+      : 'Estorno';
+  }
+
+  return tx.direction === 'IN'
+    ? `Recebido de ${tx.sender?.name || 'Usuário'}`
+    : `Enviado para ${tx.receiver.name}`;
+}
+
+/**
+ * Renders the transaction history with type filters, status badges and the reversal flow.
  */
 export function StatementModule({ transactions }: StatementModuleProps) {
   const [filter, setFilter] = useState<FilterType>('ALL');
@@ -34,37 +83,34 @@ export function StatementModule({ transactions }: StatementModuleProps) {
     initialState,
   );
 
-  const filteredTransactions = transactions.filter((tx) => {
-    if (filter === 'ALL') return true;
-    return tx.type === filter;
-  });
+  const filteredTransactions = transactions.filter(
+    (tx) => filter === 'ALL' || tx.type === filter,
+  );
 
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h2 className="text-lg font-bold text-brand-navy">
-            Módulo: Extrato Contábil & Estornos (Ledger)
+            Extrato & Estornos
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-            Histórico auditável de todas as operações. Depósitos e
-            transferências concluídos podem ser revertidos sob solicitação.
+            Histórico completo das suas operações. Um estorno não apaga nada:
+            ele cria um novo lançamento ligado à operação original.
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            Prazos: quem enviou pode estornar em até 15 minutos; quem recebeu e
+            depósitos, em até 24 horas.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-1.5 text-xs">
-          {(
-            [
-              { key: 'ALL', label: 'Todos' },
-              { key: 'DEPOSIT', label: 'Depósitos' },
-              { key: 'TRANSFER', label: 'Transferências' },
-              { key: 'REVERSAL', label: 'Estornos' },
-            ] as const
-          ).map((tab) => (
+          {FILTERS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setFilter(tab.key)}
+              aria-pressed={filter === tab.key}
               className={`px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer ${
                 filter === tab.key
                   ? 'bg-brand-navy text-brand-gold border border-brand-gold/40'
@@ -77,28 +123,12 @@ export function StatementModule({ transactions }: StatementModuleProps) {
         </div>
       </header>
 
-      {state.message && (
-        <div
-          role="alert"
-          className={`flex items-center gap-2.5 p-3.5 rounded-lg border text-xs sm:text-sm ${
-            state.success
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
-          }`}
-        >
-          {state.success ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-          )}
-          <span>{state.message}</span>
-        </div>
-      )}
+      <ActionAlert state={state} />
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
         {filteredTransactions.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
-            Nenhuma movimentação encontrada para o filtro selecionado.
+            Nenhuma movimentação para este filtro.
           </div>
         ) : (
           filteredTransactions.map((tx) => {
@@ -112,7 +142,7 @@ export function StatementModule({ transactions }: StatementModuleProps) {
                   <div className="flex items-start gap-3">
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                        isReversed
+                        tx.type === 'REVERSAL' || isReversed
                           ? 'bg-amber-100 text-amber-700'
                           : isIncoming
                             ? 'bg-emerald-100 text-emerald-700'
@@ -129,29 +159,28 @@ export function StatementModule({ transactions }: StatementModuleProps) {
                     </div>
 
                     <div>
-                      <div
-                        className={`text-sm font-semibold ${
-                          isReversed
-                            ? 'line-through text-slate-400'
-                            : 'text-slate-900'
-                        }`}
-                      >
-                        {tx.description || tx.type}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`text-sm font-semibold ${
+                            isReversed
+                              ? 'line-through text-slate-400'
+                              : 'text-slate-900'
+                          }`}
+                        >
+                          {tx.description || tx.type}
+                        </span>
+                        <StatusBadge tx={tx} />
                       </div>
                       <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-0.5">
+                        <span className="font-mono text-slate-400">
+                          {shortReference(tx.id)}
+                        </span>
+                        <span>•</span>
                         <span suppressHydrationWarning>
                           {formatDateTime(tx.createdAt)}
                         </span>
                         <span>•</span>
-                        <span>
-                          {tx.type === 'DEPOSIT'
-                            ? 'Depósito Direto'
-                            : tx.type === 'REVERSAL'
-                              ? 'Contra-lançamento de Estorno'
-                              : isIncoming
-                                ? `Recebido de ${tx.sender?.name || 'Usuário'}`
-                                : `Enviado para ${tx.receiver.name}`}
-                        </span>
+                        <span>{counterpartLabel(tx)}</span>
                       </div>
                       {tx.reversalReason && (
                         <div className="text-xs text-amber-700 mt-1">
@@ -176,40 +205,43 @@ export function StatementModule({ transactions }: StatementModuleProps) {
                       {formatCurrencyFromCents(tx.amountCents)}
                     </span>
 
-                    {isReversed ? (
-                      <span className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-semibold">
-                        Revertida
-                      </span>
-                    ) : tx.canReverse ? (
+                    {tx.reversalState === 'AVAILABLE' && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setReversingId(isConfirming ? null : tx.id)
-                        }
+                        onClick={() => setReversingId(isConfirming ? null : tx.id)}
                         className="px-3 py-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition cursor-pointer"
                       >
-                        {isConfirming ? 'Cancelar' : 'Solicitar Reversão'}
+                        {isConfirming ? 'Cancelar' : 'Estornar'}
                       </button>
-                    ) : null}
+                    )}
+
+                    {tx.reversalState === 'EXPIRED' && (
+                      <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-500 text-[11px] font-medium">
+                        Prazo de estorno expirado
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {isConfirming && tx.canReverse && (
+                {isConfirming && tx.reversalState === 'AVAILABLE' && (
                   <form
                     action={formAction}
                     onSubmit={() => setReversingId(null)}
                     className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs"
                   >
                     <input type="hidden" name="transactionId" value={tx.id} />
-                    <label htmlFor={`reason-${tx.id}`} className="font-semibold text-slate-700">
-                      Motivo do estorno:
+                    <label
+                      htmlFor={`reason-${tx.id}`}
+                      className="font-semibold text-slate-700"
+                    >
+                      Motivo do estorno (opcional):
                     </label>
                     <input
                       id={`reason-${tx.id}`}
                       type="text"
                       name="reason"
-                      maxLength={140}
-                      placeholder="Ex: Valor digitado incorretamente"
+                      maxLength={200}
+                      placeholder="Ex: Valor digitado errado"
                       className="flex-1 min-w-[200px] px-3 py-1.5 rounded border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-brand-navy"
                     />
                     <button
@@ -217,9 +249,7 @@ export function StatementModule({ transactions }: StatementModuleProps) {
                       disabled={isPending}
                       className="px-4 py-1.5 rounded bg-brand-navy text-brand-gold font-semibold hover:bg-brand-dark transition cursor-pointer"
                     >
-                      {isPending
-                        ? 'Estornando...'
-                        : 'Confirmar Estorno Imutável'}
+                      {isPending ? 'Estornando...' : 'Confirmar estorno'}
                     </button>
                   </form>
                 )}
@@ -231,4 +261,3 @@ export function StatementModule({ transactions }: StatementModuleProps) {
     </section>
   );
 }
-

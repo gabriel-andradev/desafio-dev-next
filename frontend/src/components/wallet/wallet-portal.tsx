@@ -114,11 +114,12 @@ export function WalletPortal({
         </div>
 
         <div className="pt-4 border-t border-white/10 space-y-3 text-xs">
-          <div>
+          <div className="p-3 rounded-lg bg-brand-navy/60 border border-white/10 space-y-0.5">
             <div className="font-semibold text-white truncate">
               {summary.user.name}
             </div>
-            <div className="text-slate-400 font-mono">
+            <div className="text-slate-400 truncate">{summary.user.email}</div>
+            <div className="text-brand-gold font-mono">
               CPF: {formatCpf(summary.user.cpf)}
             </div>
           </div>
@@ -129,7 +130,7 @@ export function WalletPortal({
               className="w-full py-2 px-3 rounded-lg bg-white/5 hover:bg-rose-500/20 text-rose-300 border border-white/10 flex items-center justify-center gap-2 font-medium transition cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Encerrar Sessão</span>
+              <span>Sair da conta</span>
             </button>
           </form>
         </div>
@@ -145,13 +146,12 @@ export function WalletPortal({
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="text-xs sm:text-sm">
                 <div className="font-bold text-rose-900">
-                  Atenção: Sua carteira encontra-se com saldo negativo (
+                  Sua carteira está com saldo negativo (
                   {formatCurrencyFromCents(summary.balanceCents)})
                 </div>
                 <p className="text-rose-700 mt-0.5">
-                  Realize um depósito para regularizar sua conta. O valor
-                  depositado abaterá automaticamente o saldo devedor e somará o
-                  restante.
+                  Faça um depósito para regularizar: o valor quita a dívida
+                  primeiro e o restante fica disponível.
                 </p>
               </div>
             </div>
@@ -161,7 +161,7 @@ export function WalletPortal({
               onClick={() => handleSelectModule('deposit')}
               className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition cursor-pointer"
             >
-              Cobrir Saldo Agora
+              Depositar agora
             </button>
           </div>
         )}

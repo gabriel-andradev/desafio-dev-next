@@ -18,6 +18,7 @@ export interface WalletTransaction {
   reversalReason: string | null;
   createdAt: string;
   reversedAt: string | null;
+  reversalState: 'AVAILABLE' | 'EXPIRED' | 'UNAVAILABLE';
   canReverse: boolean;
 }
 

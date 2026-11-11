@@ -12,6 +12,26 @@ interface OverviewModuleProps {
   onSelectModule: (mod: ModuleKey) => void;
 }
 
+const HIDDEN_VALUE = 'R$ ••••••';
+
+const SHORTCUTS: { key: ModuleKey; title: string; description: string }[] = [
+  {
+    key: 'deposit',
+    title: 'Depositar →',
+    description: 'Adicione saldo ou quite um saldo negativo.',
+  },
+  {
+    key: 'transfer',
+    title: 'Transferir →',
+    description: 'Envie dinheiro para outra conta por e-mail ou CPF.',
+  },
+  {
+    key: 'statement',
+    title: 'Extrato & Estornos →',
+    description: 'Veja o histórico completo e estorne operações.',
+  },
+];
+
 /**
  * Renders the wallet overview cards, totals, quick shortcuts, and recent transactions preview.
  */
@@ -38,12 +58,10 @@ export function OverviewModule({
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-xl font-bold text-brand-navy">
-            Visão Geral da Carteira
-          </h1>
+          <h1 className="text-xl font-bold text-brand-navy">Visão Geral</h1>
           <p className="text-xs sm:text-sm text-slate-600">
-            Bem-vindo(a), {summary.user.name}. Acompanhe seu saldo e acesse os
-            módulos operacionais.
+            Olá, {summary.user.name}. Acompanhe seu saldo e acesse as operações
+            da sua carteira.
           </p>
         </div>
 
@@ -54,17 +72,18 @@ export function OverviewModule({
               : 'bg-emerald-100 text-emerald-800'
           }`}
         >
-          {summary.isNegative ? 'Saldo Negativo' : 'Conta Regular'}
+          {summary.isNegative ? 'Saldo negativo' : 'Conta regular'}
         </span>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-xl bg-brand-navy text-white border border-brand-gold/40 shadow-md space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-300">
-            <span>Saldo Disponível</span>
+            <span>Saldo disponível</span>
             <button
               type="button"
               onClick={() => setHideBalance((prev) => !prev)}
+              aria-pressed={hideBalance}
               className="text-brand-gold hover:underline flex items-center gap-1 cursor-pointer"
             >
               {hideBalance ? (
@@ -85,98 +104,75 @@ export function OverviewModule({
             }`}
           >
             {hideBalance
-              ? 'R$ ••••••'
+              ? HIDDEN_VALUE
               : formatCurrencyFromCents(summary.balanceCents)}
           </div>
         </div>
 
         <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2">
           <div className="text-xs text-slate-500 font-medium">
-            Total de Depósitos Ativos
+            Total depositado
           </div>
           <div
             suppressHydrationWarning
             className="text-xl font-bold font-mono text-emerald-600"
           >
             {hideBalance
-              ? 'R$ ••••••'
+              ? HIDDEN_VALUE
               : `+ ${formatCurrencyFromCents(totalDepositsCents)}`}
           </div>
         </div>
 
         <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-2">
           <div className="text-xs text-slate-500 font-medium">
-            Total de Transferências Enviadas
+            Total transferido
           </div>
           <div
             suppressHydrationWarning
             className="text-xl font-bold font-mono text-rose-600"
           >
             {hideBalance
-              ? 'R$ ••••••'
+              ? HIDDEN_VALUE
               : `- ${formatCurrencyFromCents(totalSentCents)}`}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <button
-          type="button"
-          onClick={() => onSelectModule('deposit')}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-brand-navy shadow-sm text-left transition cursor-pointer"
-        >
-          <div className="text-sm font-bold text-brand-navy">
-            Ir para Depósito →
-          </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Adicione saldo ou regularize saldo negativo
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectModule('transfer')}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-brand-navy shadow-sm text-left transition cursor-pointer"
-        >
-          <div className="text-sm font-bold text-brand-navy">
-            Ir para Transferência →
-          </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Envie valores por E-mail ou CPF com proteção ACID
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectModule('statement')}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-brand-navy shadow-sm text-left transition cursor-pointer"
-        >
-          <div className="text-sm font-bold text-brand-navy">
-            Extrato & Reversões →
-          </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Consulte o histórico contábil ou solicite estorno
-          </div>
-        </button>
+        {SHORTCUTS.map((shortcut) => (
+          <button
+            key={shortcut.key}
+            type="button"
+            onClick={() => onSelectModule(shortcut.key)}
+            className="p-4 rounded-xl bg-white border border-slate-200 hover:border-brand-navy shadow-sm text-left transition cursor-pointer"
+          >
+            <div className="text-sm font-bold text-brand-navy">
+              {shortcut.title}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">
+              {shortcut.description}
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-brand-navy">
-            Últimas Movimentações
+            Últimas movimentações
           </h2>
           <button
             type="button"
             onClick={() => onSelectModule('statement')}
             className="text-xs text-brand-navy font-semibold hover:underline cursor-pointer"
           >
-            Ver extrato completo e estornos →
+            Ver extrato completo →
           </button>
         </div>
 
         {summary.transactions.length === 0 ? (
           <p className="text-xs text-slate-500 py-4 text-center">
-            Nenhuma movimentação realizada ainda.
+            Nenhuma movimentação ainda.
           </p>
         ) : (
           <div className="divide-y divide-slate-100 text-xs">
@@ -212,8 +208,9 @@ export function OverviewModule({
                         : 'text-rose-600'
                   }`}
                 >
-                  {tx.direction === 'IN' ? '+' : '-'}{' '}
-                  {formatCurrencyFromCents(tx.amountCents)}
+                  {hideBalance
+                    ? HIDDEN_VALUE
+                    : `${tx.direction === 'IN' ? '+' : '-'} ${formatCurrencyFromCents(tx.amountCents)}`}
                 </span>
               </div>
             ))}
@@ -223,4 +220,3 @@ export function OverviewModule({
     </section>
   );
 }
-

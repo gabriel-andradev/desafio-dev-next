@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { loginAction, registerAction } from '@/actions/auth.actions';
 import { formatCpf, isAllowedNumericKey } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
@@ -24,6 +24,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const action = isLogin ? loginAction : registerAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [cpf, setCpf] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <main className="min-h-screen bg-brand-dark text-white flex flex-col justify-center items-center px-4 py-10">
@@ -168,17 +169,33 @@ export function AuthForm({ mode }: AuthFormProps) {
               >
                 Senha {isLogin ? '' : '(mín. 8 caracteres)'}
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={isLogin ? undefined : 8}
-                maxLength={72}
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={isLogin ? undefined : 8}
+                  maxLength={72}
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
+                  placeholder="••••••••"
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={showPassword}
+                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-brand-gold transition cursor-pointer"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

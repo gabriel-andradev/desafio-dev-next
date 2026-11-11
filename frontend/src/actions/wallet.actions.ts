@@ -41,7 +41,7 @@ export async function depositAction(
 
     return {
       success: true,
-      message: 'Depósito realizado e saldo atualizado com sucesso!',
+      message: 'Depósito realizado com sucesso.',
     };
   } catch (error) {
     if (error instanceof ApiClientError) {
@@ -119,7 +119,7 @@ export async function transferAction(
 
     return {
       success: true,
-      message: 'Transferência enviada com sucesso!',
+      message: 'Transferência realizada com sucesso.',
     };
   } catch (error) {
     if (error instanceof ApiClientError) {
@@ -161,7 +161,7 @@ export async function reverseTransactionAction(
 
     return {
       success: true,
-      message: 'Operação revertida e saldos estornados com sucesso!',
+      message: 'Estorno realizado com sucesso.',
     };
   } catch (error) {
     if (error instanceof ApiClientError) {
