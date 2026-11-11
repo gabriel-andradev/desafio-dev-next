@@ -13,5 +13,13 @@ export class PrismaService
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
   }
+
+  /**
+   * Performs a lightweight database connectivity check.
+   */
+  async ping(): Promise<boolean> {
+    await this.$queryRaw`SELECT 1`;
+    return true;
+  }
 }
 
