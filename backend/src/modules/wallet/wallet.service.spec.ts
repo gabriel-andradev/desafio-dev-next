@@ -122,6 +122,7 @@ describe('WalletService', () => {
         type: 'DEPOSIT',
         status: 'COMPLETED',
         amountCents: 15000,
+        receiverWalletId: 'wallet-1',
         idempotencyKey: 'idemp-key-1',
       });
 
@@ -139,6 +140,47 @@ describe('WalletService', () => {
       expect(result.transaction.id).toBe('tx-existing');
       expect(result.isIdempotentReplay).toBe(true);
       expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('should reject an idempotency key already used by another wallet without leaking its transaction', async () => {
+      mockPrismaService.transaction.findUnique.mockResolvedValue({
+        id: 'tx-from-someone-else',
+        type: 'DEPOSIT',
+        status: 'COMPLETED',
+        amountCents: 15000,
+        receiverWalletId: 'wallet-other',
+        idempotencyKey: 'idemp-key-1',
+      });
+
+      mockPrismaService.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 25000,
+      });
+
+      await expect(
+        service.deposit('user-1', { amountCents: 15000 }, 'idemp-key-1'),
+      ).rejects.toThrow(ConflictException);
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('should reject an idempotency key reused with a different amount', async () => {
+      mockPrismaService.transaction.findUnique.mockResolvedValue({
+        id: 'tx-existing',
+        type: 'DEPOSIT',
+        status: 'COMPLETED',
+        amountCents: 15000,
+        receiverWalletId: 'wallet-1',
+        idempotencyKey: 'idemp-key-1',
+      });
+
+      mockPrismaService.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 25000,
+      });
+
+      await expect(
+        service.deposit('user-1', { amountCents: 99900 }, 'idemp-key-1'),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -228,6 +270,7 @@ describe('WalletService', () => {
         type: 'TRANSFER',
         status: 'COMPLETED',
         amountCents: 5000,
+        senderWalletId: 'wallet-1',
         idempotencyKey: 'idemp-tx-1',
       });
 

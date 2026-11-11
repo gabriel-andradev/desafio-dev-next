@@ -24,6 +24,26 @@ export class WalletService {
   ) {}
 
   /**
+   * Rejects an idempotency key that was already used for a different operation or by another wallet,
+   * so a replay can never return (or leak) someone else's transaction.
+   */
+  private assertSameIdempotentOperation(
+    existingTx: { type: string; amountCents: number },
+    expected: { type: TransactionType; amountCents: number; ownerMatches: boolean },
+  ): void {
+    const isSameOperation =
+      expected.ownerMatches &&
+      existingTx.type === expected.type &&
+      existingTx.amountCents === expected.amountCents;
+
+    if (!isSameOperation) {
+      throw new ConflictException(
+        'Esta chave de idempotência já foi utilizada em outra operação.',
+      );
+    }
+  }
+
+  /**
    * Retrieves the user's wallet balance, negative balance indicator, and transaction history.
    */
   async getWalletSummary(userId: string) {
@@ -128,6 +148,12 @@ export class WalletService {
           where: { userId },
         });
 
+        this.assertSameIdempotentOperation(existingTx, {
+          type: TransactionType.DEPOSIT,
+          amountCents: dto.amountCents,
+          ownerMatches: existingTx.receiverWalletId === wallet?.id,
+        });
+
         return {
           transaction: existingTx,
           previousBalanceCents: wallet?.balanceCents ?? 0,
@@ -192,6 +218,12 @@ export class WalletService {
       if (existingTx) {
         const senderWallet = await this.prisma.wallet.findUnique({
           where: { userId: senderUserId },
+        });
+
+        this.assertSameIdempotentOperation(existingTx, {
+          type: TransactionType.TRANSFER,
+          amountCents: dto.amountCents,
+          ownerMatches: existingTx.senderWalletId === senderWallet?.id,
         });
 
         return {
