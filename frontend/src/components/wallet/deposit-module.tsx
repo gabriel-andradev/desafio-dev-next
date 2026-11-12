@@ -11,6 +11,7 @@ import {
 } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
 import { ActionAlert } from './action-alert';
+import { useIdempotencyKey } from './use-idempotency-key';
 
 interface DepositModuleProps {
   currentBalanceCents: number;
@@ -37,6 +38,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
     initialState,
   );
 
+  const idempotencyKey = useIdempotencyKey(state);
   const previewDepositCents = parseCurrencyInputToCents(amountInput);
   const projectedBalanceCents = currentBalanceCents + previewDepositCents;
 
@@ -56,6 +58,7 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
         action={formAction}
         className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
       >
+        <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
         <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
           <div>
             <label

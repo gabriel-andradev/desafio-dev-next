@@ -27,7 +27,8 @@ export class AuthService {
       passwordHash,
     });
 
-    const accessToken = await this.generateToken(user.id, user.email);
+    // A brand-new account starts at session version 0.
+    const accessToken = await this.generateToken(user.id, user.email, 0);
 
     return {
       accessToken,
@@ -60,6 +61,7 @@ export class AuthService {
     const accessToken = await this.generateToken(
       sanitizedUser.id,
       sanitizedUser.email,
+      userWithPassword.tokenVersion,
     );
 
     return {
@@ -68,11 +70,23 @@ export class AuthService {
     };
   }
 
-  private async generateToken(userId: string, email: string): Promise<string> {
+  /**
+   * Revokes every JWT issued so far for this user by bumping the session version
+   * (JwtStrategy rejects tokens whose `ver` claim no longer matches).
+   */
+  async logout(userId: string): Promise<void> {
+    await this.usersService.incrementTokenVersion(userId);
+  }
+
+  private async generateToken(
+    userId: string,
+    email: string,
+    tokenVersion: number,
+  ): Promise<string> {
     return this.jwtService.signAsync({
       sub: userId,
       email,
+      ver: tokenVersion,
     });
   }
 }
-

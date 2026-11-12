@@ -9,11 +9,14 @@ services:
       - "3333:3333"
     environment:
       PORT: 3333
-      DATABASE_URL: "file:./prod.db"
+      # SQLite file in a named volume (/app/prisma/data): survives rebuilds and restarts.
+      DATABASE_URL: "file:./data/prod.db"
       FRONTEND_URL: "http://localhost:3000"
       # Local-only default so a fresh clone boots with no .env; override via shell or a root .env file.
       JWT_SECRET: "${JWT_SECRET:-local-dev-only-secret-change-me-before-any-real-deploy}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-1d}"
+    volumes:
+      - api_data:/app/prisma/data
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3333/api/health"]
       interval: 10s
@@ -34,3 +37,5 @@ services:
       backend:
         condition: service_healthy
 
+volumes:
+  api_data:

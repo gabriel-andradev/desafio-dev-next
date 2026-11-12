@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  UnprocessableEntityException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -38,13 +38,13 @@ export class TransactionDomainRules {
     amount: Money;
   }): void {
     if (params.senderUserId === params.recipientUserId) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'Não é permitido realizar transferência para a própria carteira.',
       );
     }
 
     if (!params.amount.isCoveredBy(params.senderBalanceCents)) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'Saldo insuficiente para realizar a transferência.',
       );
     }
@@ -71,7 +71,7 @@ export class TransactionDomainRules {
     }
 
     if (transaction.type === TransactionType.REVERSAL) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'Não é permitido reverter uma transação que já é um estorno.',
       );
     }
@@ -93,7 +93,7 @@ export class TransactionDomainRules {
         );
       }
       if (elapsedMinutes > 1440) {
-        throw new BadRequestException(
+        throw new UnprocessableEntityException(
           'O prazo limite de 24 horas para estorno deste depósito expirou.',
         );
       }
@@ -105,17 +105,56 @@ export class TransactionDomainRules {
 
       if (isSender) {
         if (elapsedMinutes > 15) {
-          throw new BadRequestException(
+          throw new UnprocessableEntityException(
             'O prazo de arrependimento do remetente (15 minutos) expirou. Solicite a devolução diretamente ao destinatário.',
           );
         }
       } else if (isReceiver) {
         if (elapsedMinutes > 1440) {
-          throw new BadRequestException(
+          throw new UnprocessableEntityException(
             'O prazo limite para devolução voluntária pelo destinatário (24 horas) expirou.',
           );
         }
       }
+    }
+  }
+
+  /** Minimum length of the justification required for an internal compensation. */
+  static readonly COMPENSATION_REASON_MIN_LENGTH = 10;
+
+  /**
+   * Validates an internal compensation of a technical inconsistency.
+   * Unlike a user reversal there is no time window and no participant check: the trusted origin is the
+   * operator running the internal script on the server. It still requires a justification and an operator,
+   * and can never touch a reversal entry or something already reversed.
+   */
+  static validateCompensationPreconditions(
+    transaction: { type: string; status: string },
+    reason: string,
+    operator: string,
+  ): void {
+    if (transaction.status === TransactionStatus.REVERSED) {
+      throw new ConflictException(
+        'Esta transação já foi revertida anteriormente.',
+      );
+    }
+
+    if (transaction.type === TransactionType.REVERSAL) {
+      throw new UnprocessableEntityException(
+        'Não é permitido reverter uma transação que já é um estorno.',
+      );
+    }
+
+    if (reason.trim().length < this.COMPENSATION_REASON_MIN_LENGTH) {
+      throw new UnprocessableEntityException(
+        `Informe uma justificativa com pelo menos ${this.COMPENSATION_REASON_MIN_LENGTH} caracteres.`,
+      );
+    }
+
+    if (!operator.trim()) {
+      throw new UnprocessableEntityException(
+        'Informe o responsável pela compensação.',
+      );
     }
   }
 
@@ -130,7 +169,9 @@ export class TransactionDomainRules {
     requesterWalletId: string,
     currentDate: Date = new Date(),
   ): ReversalState {
-    if (this.isEligibleForReversal(transaction, requesterWalletId, currentDate)) {
+    if (
+      this.isEligibleForReversal(transaction, requesterWalletId, currentDate)
+    ) {
       return 'AVAILABLE';
     }
 
@@ -163,4 +204,3 @@ export class TransactionDomainRules {
     }
   }
 }
-

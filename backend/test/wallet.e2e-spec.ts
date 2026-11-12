@@ -24,6 +24,7 @@ describe('Financial Wallet Flow (e2e)', () => {
         whitelist: true,
         forbidNonWhitelisted: true,
         transform: true,
+        errorHttpStatusCode: 422,
       }),
     );
     app.useGlobalFilters(new AllExceptionsFilter());
@@ -145,4 +146,3 @@ describe('Financial Wallet Flow (e2e)', () => {
     expect(depositRecoveryB.body.newBalanceCents).toBe(7000);
   });
 });
-

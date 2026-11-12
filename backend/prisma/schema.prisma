@@ -13,6 +13,7 @@ model User {
   email        String   @unique
   cpf          String   @unique
   passwordHash String
+  tokenVersion Int      @default(0) // bumped on logout: invalidates every JWT issued before
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   wallet       Wallet?
@@ -35,7 +36,7 @@ model Wallet {
 
 model Transaction {
   id                    String       @id @default(uuid())
-  type                  String       // DEPOSIT | TRANSFER | REVERSAL
+  type                  String // DEPOSIT | TRANSFER | REVERSAL
   status                String       @default("COMPLETED") // COMPLETED | REVERSED | FAILED
   amountCents           Int
   description           String?
@@ -47,6 +48,8 @@ model Transaction {
   originalTransaction   Transaction? @relation("TransactionReversal", fields: [originalTransactionId], references: [id])
   reversalTransaction   Transaction? @relation("TransactionReversal")
   reversalReason        String?
+  reversalSource        String? // USER | COMPENSATION (on REVERSAL entries)
+  reversalActor         String? // user:<id> | operator:<name>
   idempotencyKey        String?      @unique
   createdAt             DateTime     @default(now())
   reversedAt            DateTime?
@@ -56,4 +59,3 @@ model Transaction {
   @@index([createdAt])
   @@map("transactions")
 }
-

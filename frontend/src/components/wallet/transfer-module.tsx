@@ -4,7 +4,6 @@ import { useActionState, useState } from 'react';
 import { Send, UserCheck } from 'lucide-react';
 import { transferAction } from '@/actions/wallet.actions';
 import {
-  formatCpf,
   formatCurrencyFromCents,
   formatCurrencyInput,
   formatRecipientInput,
@@ -14,6 +13,7 @@ import {
 } from '@/lib/formatters';
 import { ActionState, UserParticipant } from '@/types/wallet';
 import { ActionAlert } from './action-alert';
+import { useIdempotencyKey } from './use-idempotency-key';
 
 interface TransferModuleProps {
   currentBalanceCents: number;
@@ -69,13 +69,12 @@ export function TransferModule({
     initialState,
   );
 
+  const idempotencyKey = useIdempotencyKey(state);
   const transferCents = parseCurrencyInputToCents(amount);
   const projectedBalanceCents = currentBalanceCents - transferCents;
   const hasInsufficientBalance = transferCents > currentBalanceCents;
   const selectedContact = recipients.find(
-    (contact) =>
-      contact.email === recipientInput ||
-      (contact.cpf && formatCpf(contact.cpf) === recipientInput),
+    (contact) => contact.email === recipientInput,
   );
 
   return (
@@ -108,6 +107,7 @@ export function TransferModule({
         action={formAction}
         className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
       >
+        <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div>
@@ -215,9 +215,9 @@ export function TransferModule({
                         </div>
                         <div className="text-slate-500">{contact.email}</div>
                       </div>
-                      {contact.cpf && (
+                      {contact.maskedCpf && (
                         <span className="font-mono text-slate-400">
-                          {formatCpf(contact.cpf)}
+                          {contact.maskedCpf}
                         </span>
                       )}
                     </button>

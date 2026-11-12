@@ -24,7 +24,9 @@ export async function depositAction(
   }
 
   try {
-    const idempotencyKey = crypto.randomUUID();
+    // The key comes from the form: a retry or double submit of the same form reuses it.
+    const idempotencyKey =
+      String(formData.get('idempotencyKey') || '') || crypto.randomUUID();
     await apiRequest('/wallet/deposit', {
       method: 'POST',
       headers: {
@@ -101,7 +103,9 @@ export async function transferAction(
   }
 
   try {
-    const idempotencyKey = crypto.randomUUID();
+    // The key comes from the form: a retry or double submit of the same form reuses it.
+    const idempotencyKey =
+      String(formData.get('idempotencyKey') || '') || crypto.randomUUID();
     await apiRequest('/wallet/transfer', {
       method: 'POST',
       headers: {

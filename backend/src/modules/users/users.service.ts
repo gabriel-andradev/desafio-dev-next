@@ -119,7 +119,30 @@ export class UsersService {
       orderBy: { name: 'asc' },
     });
 
-    return users;
+    // Contacts only need enough to recognise someone: the full CPF never leaves the API (LGPD data minimisation).
+    return users.map(({ cpf, ...contact }) => ({
+      ...contact,
+      maskedCpf: UsersService.maskCpf(cpf),
+    }));
+  }
+
+  /**
+   * Bumps the session version: every JWT carrying the previous version stops being accepted.
+   */
+  async incrementTokenVersion(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+  }
+
+  /**
+   * Masks a CPF as ***.666.777-** (the gov.br convention), keeping only the middle digits.
+   */
+  static maskCpf(cpf: string): string {
+    return /^\d{11}$/.test(cpf)
+      ? `***.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-**`
+      : '***';
   }
 
   /**
@@ -148,4 +171,3 @@ export class UsersService {
     };
   }
 }
-

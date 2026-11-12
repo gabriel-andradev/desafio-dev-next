@@ -6,11 +6,12 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { Money } from '../domain/money.vo';
 
 export class DepositDto {
   @IsInt({ message: 'O valor do depósito deve ser informado em centavos (inteiro).' })
   @Min(1, { message: 'O valor mínimo para depósito é de R$ 0,01 (1 centavo).' })
-  @Max(100_000_000, {
+  @Max(Money.MAX_OPERATION_CENTS, {
     message: 'O valor excede o limite máximo permitido por operação.',
   })
   amountCents!: number;

@@ -8,6 +8,8 @@ import { AuthenticatedUser } from '../../../common/decorators/current-user.decor
 export interface JwtPayload {
   sub: string;
   email: string;
+  /** Session version at issue time; tokens from before a logout no longer match. */
+  ver?: number;
 }
 
 @Injectable()
@@ -30,7 +32,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user || !user.wallet) {
-      throw new UnauthorizedException('Sessão inválida ou usuário inexistente.');
+      throw new UnauthorizedException(
+        'Sessão inválida ou usuário inexistente.',
+      );
+    }
+
+    if ((payload.ver ?? 0) !== user.tokenVersion) {
+      throw new UnauthorizedException(
+        'Sessão encerrada. Faça login novamente.',
+      );
     }
 
     return {
@@ -42,4 +52,3 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     };
   }
 }
-

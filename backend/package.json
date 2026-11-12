@@ -11,8 +11,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:seed": "ts-node prisma/seed.ts"
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "db:seed": "ts-node prisma/seed.ts",
+    "wallet:compensate": "ts-node src/scripts/compensate.ts",
+    "wallet:compensate:prod": "node dist/src/scripts/compensate.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

@@ -7,6 +7,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { Money } from '../domain/money.vo';
 import { Transform } from 'class-transformer';
 
 export class TransferDto {
@@ -17,7 +18,7 @@ export class TransferDto {
 
   @IsInt({ message: 'O valor da transferência deve ser informado em centavos (inteiro).' })
   @Min(1, { message: 'O valor mínimo para transferência é de R$ 0,01 (1 centavo).' })
-  @Max(100_000_000, {
+  @Max(Money.MAX_OPERATION_CENTS, {
     message: 'O valor excede o limite máximo permitido por operação.',
   })
   amountCents!: number;

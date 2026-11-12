@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  UnprocessableEntityException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -18,12 +18,12 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
     });
 
     it('should reject floating point numbers to prevent IEEE 754 precision loss', () => {
-      expect(() => Money.fromCents(10.5)).toThrow(BadRequestException);
+      expect(() => Money.fromCents(10.5)).toThrow(UnprocessableEntityException);
     });
 
     it('should reject zero or negative monetary amounts', () => {
-      expect(() => Money.fromCents(0)).toThrow(BadRequestException);
-      expect(() => Money.fromCents(-500)).toThrow(BadRequestException);
+      expect(() => Money.fromCents(0)).toThrow(UnprocessableEntityException);
+      expect(() => Money.fromCents(-500)).toThrow(UnprocessableEntityException);
     });
 
     it('should accurately calculate new balance when depositing into a negative wallet', () => {
@@ -44,7 +44,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
           senderBalanceCents: 10000,
           amount,
         }),
-      ).toThrow(BadRequestException);
+      ).toThrow(UnprocessableEntityException);
     });
 
     it('should reject transfer when balance does not cover the requested amount', () => {
@@ -57,7 +57,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
           senderBalanceCents: 5000,
           amount,
         }),
-      ).toThrow(BadRequestException);
+      ).toThrow(UnprocessableEntityException);
     });
 
     it('should forbid reversal when requester is neither sender nor receiver', () => {
@@ -87,7 +87,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
           },
           'wallet-1',
         ),
-      ).toThrow(BadRequestException);
+      ).toThrow(UnprocessableEntityException);
     });
 
     it('should reject reversing an already REVERSED transaction', () => {
@@ -140,7 +140,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
           'wallet-1',
           now,
         ),
-      ).toThrow(BadRequestException);
+      ).toThrow(UnprocessableEntityException);
     });
 
     it('should allow recipient to return transfer within 24 hours', () => {
@@ -178,7 +178,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
           'wallet-2',
           now,
         ),
-      ).toThrow(BadRequestException);
+      ).toThrow(UnprocessableEntityException);
     });
 
     it('should reject non-owner reversing a deposit', () => {
@@ -212,7 +212,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
           'wallet-1',
           now,
         ),
-      ).toThrow(BadRequestException);
+      ).toThrow(UnprocessableEntityException);
     });
 
     describe('getReversalState', () => {

@@ -2,7 +2,8 @@ export interface UserParticipant {
   id: string;
   name: string;
   email: string;
-  cpf?: string;
+  /** Only on transfer contacts: the API never sends other users' full CPF. */
+  maskedCpf?: string;
 }
 
 export interface WalletTransaction {

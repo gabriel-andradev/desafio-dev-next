@@ -1,6 +1,7 @@
+import { Prisma } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  BadRequestException,
+  UnprocessableEntityException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -197,7 +198,7 @@ describe('WalletService', () => {
           recipientIdentifier: 'alice@email.com',
           amountCents: 5000,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('should reject transfer when sender has insufficient balance', async () => {
@@ -220,7 +221,7 @@ describe('WalletService', () => {
           recipientIdentifier: 'bob@email.com',
           amountCents: 5000,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('should debit sender and credit receiver atomically when balance is sufficient', async () => {
@@ -382,5 +383,51 @@ describe('WalletService', () => {
       });
     });
   });
-});
 
+  describe('SQLite lock handling', () => {
+    const lockError = () =>
+      new Prisma.PrismaClientKnownRequestError('write conflict', {
+        code: 'P2034',
+        clientVersion: 'test',
+      });
+
+    it('classifies P2034 and "database is locked" as transient, business errors as not', () => {
+      expect(WalletService.isTransientLockError(lockError())).toBe(true);
+      expect(
+        WalletService.isTransientLockError(
+          new Error('SQLITE_BUSY: database is locked'),
+        ),
+      ).toBe(true);
+      expect(
+        WalletService.isTransientLockError(
+          new UnprocessableEntityException('Saldo insuficiente'),
+        ),
+      ).toBe(false);
+    });
+
+    it('retries a deposit after a transient lock error and succeeds without double credit', async () => {
+      mockPrismaService.$transaction.mockImplementationOnce(() =>
+        Promise.reject(lockError()),
+      );
+      mockTx.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 0,
+      });
+      mockTx.wallet.update.mockResolvedValue({
+        id: 'wallet-1',
+        balanceCents: 5000,
+      });
+      mockTx.transaction.create.mockResolvedValue({
+        id: 'tx-1',
+        type: 'DEPOSIT',
+        amountCents: 5000,
+      });
+
+      const result = await service.deposit('user-1', { amountCents: 5000 });
+
+      expect(result.newBalanceCents).toBe(5000);
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(2);
+      expect(mockTx.transaction.create).toHaveBeenCalledTimes(1);
+    });
+  });
+});
