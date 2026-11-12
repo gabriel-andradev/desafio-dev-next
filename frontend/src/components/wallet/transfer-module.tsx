@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Send, UserCheck } from 'lucide-react';
 import { transferAction } from '@/actions/wallet.actions';
 import {
@@ -70,6 +70,14 @@ export function TransferModule({
   );
 
   const idempotencyKey = useIdempotencyKey(state);
+
+  useEffect(() => {
+    if (state.success) {
+      setRecipientInput('');
+      setAmount('');
+    }
+  }, [state]);
+
   const transferCents = parseCurrencyInputToCents(amount);
   const projectedBalanceCents = currentBalanceCents - transferCents;
   const hasInsufficientBalance = transferCents > currentBalanceCents;

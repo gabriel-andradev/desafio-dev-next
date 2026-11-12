@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { depositAction } from '@/actions/wallet.actions';
 import {
@@ -39,6 +39,16 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
   );
 
   const idempotencyKey = useIdempotencyKey(state);
+
+  // After a successful deposit, clear the amount: the idempotency key rotates on success, so keeping
+  // the old value would let a second click create a second deposit. On error the value is kept for
+  // correction (same behaviour as the Laravel version, which only re-fills inputs after an error).
+  useEffect(() => {
+    if (state.success) {
+      setAmountInput('');
+    }
+  }, [state]);
+
   const previewDepositCents = parseCurrencyInputToCents(amountInput);
   const projectedBalanceCents = currentBalanceCents + previewDepositCents;
 

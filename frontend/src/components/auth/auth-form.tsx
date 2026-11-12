@@ -16,6 +16,158 @@ const initialState: ActionState = {
   message: '',
 };
 
+function AuthHeader({ isLogin }: { isLogin: boolean }) {
+  return (
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-xl bg-brand-dark border border-brand-gold flex items-center justify-center font-serif font-bold text-brand-gold text-base shadow-inner">
+          AC
+        </div>
+        <div>
+          <h1 className="text-sm sm:text-base font-bold tracking-wide text-white">
+            GRUPO ADRIANO COBUCCIO
+          </h1>
+          <p className="text-xs text-brand-gold font-medium">
+            Brasil Card • Internet Banking
+          </p>
+        </div>
+      </div>
+
+      <nav
+        aria-label="Alternar modo de autenticação"
+        className="flex rounded-lg bg-brand-dark p-1 border border-white/10 text-xs"
+      >
+        <Link
+          href="/login"
+          className={`px-3 py-1.5 rounded-md font-semibold transition ${
+            isLogin
+              ? 'bg-brand-gold text-brand-dark'
+              : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Entrar
+        </Link>
+        <Link
+          href="/register"
+          className={`px-3 py-1.5 rounded-md font-semibold transition ${
+            !isLogin
+              ? 'bg-brand-gold text-brand-dark'
+              : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Cadastrar
+        </Link>
+      </nav>
+    </header>
+  );
+}
+
+interface RegisterFieldsProps {
+  cpf: string;
+  setCpf: (value: string) => void;
+}
+
+function RegisterFields({ cpf, setCpf }: RegisterFieldsProps) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label
+          htmlFor="name"
+          className="block text-xs font-medium text-slate-300 mb-1.5"
+        >
+          Nome Completo
+        </label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          required
+          minLength={3}
+          maxLength={100}
+          placeholder="Ex: Gabriel Silva"
+          className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="cpf"
+          className="block text-xs font-medium text-slate-300 mb-1.5"
+        >
+          CPF
+        </label>
+        <input
+          id="cpf"
+          name="cpf"
+          type="text"
+          inputMode="numeric"
+          required
+          value={cpf}
+          onKeyDown={(e) => {
+            if (!isAllowedNumericKey(e.key, e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+            }
+          }}
+          onChange={(e) => setCpf(formatCpf(e.target.value))}
+          maxLength={14}
+          placeholder="000.000.000-00"
+          className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
+        />
+      </div>
+    </div>
+  );
+}
+
+interface PasswordFieldProps {
+  isLogin: boolean;
+  showPassword: boolean;
+  setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function PasswordField({
+  isLogin,
+  showPassword,
+  setShowPassword,
+}: PasswordFieldProps) {
+  return (
+    <div>
+      <label
+        htmlFor="password"
+        className="block text-xs font-medium text-slate-300 mb-1.5"
+      >
+        Senha {isLogin ? '' : '(mín. 8 caracteres)'}
+      </label>
+      <div className="relative">
+        <input
+          id="password"
+          name="password"
+          type={showPassword ? 'text' : 'password'}
+          required
+          minLength={isLogin ? undefined : 8}
+          maxLength={72}
+          autoComplete={isLogin ? 'current-password' : 'new-password'}
+          placeholder="••••••••"
+          className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword((prev) => !prev)}
+          aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+          aria-pressed={showPassword}
+          title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+          className="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-brand-gold transition cursor-pointer"
+        >
+          {showPassword ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Renders the authentication card for either sign-in or account registration bound to Server Actions.
  */
@@ -29,47 +181,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <main className="min-h-screen bg-brand-dark text-white flex flex-col justify-center items-center px-4 py-10">
       <div className="w-full max-w-lg rounded-2xl bg-brand-navy/90 border border-brand-gold/30 shadow-2xl p-6 sm:p-8 space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-brand-dark border border-brand-gold flex items-center justify-center font-serif font-bold text-brand-gold text-base shadow-inner">
-              AC
-            </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-bold tracking-wide text-white">
-                GRUPO ADRIANO COBUCCIO
-              </h1>
-              <p className="text-xs text-brand-gold font-medium">
-                Brasil Card • Internet Banking
-              </p>
-            </div>
-          </div>
-
-          <nav
-            aria-label="Alternar modo de autenticação"
-            className="flex rounded-lg bg-brand-dark p-1 border border-white/10 text-xs"
-          >
-            <Link
-              href="/login"
-              className={`px-3 py-1.5 rounded-md font-semibold transition ${
-                isLogin
-                  ? 'bg-brand-gold text-brand-dark'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Entrar
-            </Link>
-            <Link
-              href="/register"
-              className={`px-3 py-1.5 rounded-md font-semibold transition ${
-                !isLogin
-                  ? 'bg-brand-gold text-brand-dark'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Cadastrar
-            </Link>
-          </nav>
-        </header>
+        <AuthHeader isLogin={isLogin} />
 
         <div className="space-y-1">
           <h2 className="text-lg font-bold text-white">
@@ -95,54 +207,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
 
         <form action={formAction} className="space-y-4 text-xs sm:text-sm">
-          {!isLogin && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-xs font-medium text-slate-300 mb-1.5"
-                >
-                  Nome Completo
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  minLength={3}
-                  maxLength={100}
-                  placeholder="Ex: Gabriel Silva"
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="cpf"
-                  className="block text-xs font-medium text-slate-300 mb-1.5"
-                >
-                  CPF
-                </label>
-                <input
-                  id="cpf"
-                  name="cpf"
-                  type="text"
-                  inputMode="numeric"
-                  required
-                  value={cpf}
-                  onKeyDown={(e) => {
-                    if (!isAllowedNumericKey(e.key, e.ctrlKey || e.metaKey)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onChange={(e) => setCpf(formatCpf(e.target.value))}
-                  maxLength={14}
-                  placeholder="000.000.000-00"
-                  className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
-                />
-              </div>
-            </div>
-          )}
+          {!isLogin && <RegisterFields cpf={cpf} setCpf={setCpf} />}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -162,41 +227,11 @@ export function AuthForm({ mode }: AuthFormProps) {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-xs font-medium text-slate-300 mb-1.5"
-              >
-                Senha {isLogin ? '' : '(mín. 8 caracteres)'}
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={isLogin ? undefined : 8}
-                  maxLength={72}
-                  autoComplete={isLogin ? 'current-password' : 'new-password'}
-                  placeholder="••••••••"
-                  className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                  aria-pressed={showPassword}
-                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                  className="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-brand-gold transition cursor-pointer"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
+            <PasswordField
+              isLogin={isLogin}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+            />
           </div>
 
           <button

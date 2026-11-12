@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AUTH_COOKIE_NAME, ApiClientError, apiRequest } from '@/lib/api';
+import { requireAuth } from '@/lib/auth';
 import { isValidEmail } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
 
@@ -127,6 +128,8 @@ export async function registerAction(
  * Clears the authentication cookie and redirects the user back to the login page.
  */
 export async function logoutAction(): Promise<void> {
+  await requireAuth();
+
   // Revoke the JWT on the API first (bumps the user's session version), then drop the cookie.
   // A failure here must not keep the user logged in on this browser.
   try {
