@@ -2,7 +2,7 @@
 
 Carteira financeira digital feita para o desafio técnico full stack do **Grupo Adriano Cobuccio**: cadastro, autenticação, depósitos, transferências entre usuários, extrato e estorno de operações.
 
-O mesmo produto também foi implementado em **PHP/Laravel** (repositório `desafio-dev-php`). As regras de negócio, os limites e as contas de demonstração são os mesmos; a arquitetura de cada um segue o próprio framework. A comparação completa está em [`docs/COMPARACAO_TECNICA.md`](docs/COMPARACAO_TECNICA.md).
+O mesmo produto também foi implementado em **PHP/Laravel** (repositório `desafio-dev-php`). Os dois projetos seguem o mesmo contrato funcional: regras financeiras, limites operacionais e contas de demonstração equivalentes. Cada um mantém a própria arquitetura, os próprios mecanismos técnicos e a própria infraestrutura. A comparação completa está em [`docs/COMPARACAO_TECNICA.md`](docs/COMPARACAO_TECNICA.md).
 
 **Diferenciais implementados:** valores em centavos inteiros, ledger imutável com estorno por contra-lançamento, idempotência de depósitos e transferências, proteção contra gasto duplo testada com processos Node independentes, compensação interna auditável, revogação do JWT no logout, limite de requisições e BFF com JWT em cookie `httpOnly`.
 
@@ -24,7 +24,7 @@ O mesmo produto também foi implementado em **PHP/Laravel** (repositório `desaf
 
 ## 2. Regras de negócio
 
-> Estas regras são idênticas no projeto PHP.
+> Regras e limites equivalentes aos do projeto PHP.
 
 **Cadastro**
 - Nome: 3 a 100 caracteres. E-mail: normalizado (sem espaços, minúsculo). CPF: exatamente 11 dígitos, gravado sem máscara (não há validação de dígito verificador em nenhuma das versões).
@@ -52,7 +52,7 @@ O mesmo produto também foi implementado em **PHP/Laravel** (repositório `desaf
 
 Os prazos são uma política desta aplicação, não do enunciado.
 
-**Compensação por inconsistência técnica:** um estorno interno, sem as janelas de prazo do usuário, para corrigir erros técnicos (ex.: crédito duplicado encontrado numa conciliação). Não existe rota HTTP para isso: só o script `npm run wallet:compensate` (executado no servidor) chama a operação. Exige justificativa (mín. 10 caracteres) e responsável, grava `reversalSource = COMPENSATION` e `reversalActor = operator:<nome>` no lançamento `REVERSAL`, e não compensa duas vezes a mesma operação.
+**Compensação por inconsistência técnica:** um estorno interno, sem as janelas de prazo do usuário, para corrigir erros técnicos (ex.: crédito duplicado encontrado numa conciliação). Não existe rota HTTP para isso: só o script `npm run wallet:compensate` (executado no servidor) chama a operação. Exige justificativa (mín. 10 caracteres) e responsável, grava `reversalSource = COMPENSATION` e `reversalActor = operator:<nome>` no lançamento `REVERSAL`, e não compensa duas vezes a mesma operação. O responsável é um identificador declarado na linha de comando e registrado para auditoria; ele não é uma identidade administrativa autenticada pelo sistema.
 
 ```bash
 npm run wallet:compensate -- --transaction=<id> "--reason=Crédito duplicado na conciliação" --operator=<responsável>
@@ -114,7 +114,7 @@ sequenceDiagram
     participant A as NestJS
     participant DB as SQLite
     U->>N: envia formulário (+ chave de idempotência)
-    N->>A: POST /wallet/transfer (Bearer JWT)
+    N->>A: POST /api/wallet/transfer (Bearer JWT)
     A->>DB: chave já usada? → devolve a original
     A->>DB: BEGIN
     A->>DB: UPDATE saldo -= v WHERE saldo >= v
@@ -185,8 +185,12 @@ erDiagram
 
 - **JWT:** emitido pela API (`JWT_SECRET`, expiração `JWT_EXPIRES_IN`), validado pelo `JwtStrategy`/`JwtAuthGuard`, que também confere se o usuário ainda existe.
 - **Logout revoga o token:** cada usuário tem uma versão de sessão (`tokenVersion`) gravada no JWT (`ver`). O logout chama `POST /api/auth/logout`, que incrementa a versão; todo token emitido antes passa a receber **401**. Efeito colateral aceito: o logout encerra a sessão em todos os dispositivos.
-- **Cookie:** o token fica num cookie `httpOnly` + `SameSite=Lax` (`Secure` em produção); o JavaScript do navegador não consegue lê-lo.
-- **CSRF:** JWT não protege contra CSRF por si só — o que protege é a combinação de: mutações apenas via Server Actions (POST), a verificação do Next.js que rejeita Server Actions cujo `Origin` não corresponde ao `Host`, e o cookie `SameSite=Lax`, que não é enviado em POSTs de outros sites. A API NestJS não lê cookies: só aceita `Authorization: Bearer`.
+- **BFF e cookie:** o Next.js é o BFF. Ele guarda o JWT num cookie `httpOnly` + `SameSite=Lax` (`Secure` quando `NODE_ENV=production`), então o token não fica disponível ao JavaScript do navegador. Do lado do servidor, as Server Actions leem o cookie e repassam o token à API.
+- **CSRF:** JWT não protege contra CSRF por si só, porque aqui ele viaja num cookie. A mitigação vem da combinação de:
+  - **mutações só por Server Actions** (POST);
+  - **verificação nativa de origem do Next.js:** a Server Action é rejeitada quando o `Origin` não corresponde a `X-Forwarded-Host` (se presente) ou a `Host`. Requisições sem `Origin` geram só um aviso, e o projeto não configura `serverActions.allowedOrigins`;
+  - **cookie `SameSite=Lax`**, que o navegador não envia em POSTs vindos de outros sites.
+- **API NestJS:** recebe o JWT exclusivamente pelo header `Authorization: Bearer` e não lê cookies. Continua responsável por autenticar (`JwtAuthGuard`), autorizar (dono da carteira, participante do estorno) e validar os dados de cada operação. As proteções do Next.js não substituem essas verificações.
 - **Dados pessoais:** a lista de contatos mostra o CPF mascarado (`***.666.777-**`); o CPF completo de outros usuários não sai da API.
 - **Entrada:** `ValidationPipe` com `whitelist` e `forbidNonWhitelisted` (campos extras são rejeitados). Erros 500 não expõem detalhes ao cliente.
 - **Autorização:** só o titular vê a própria carteira; estornar exige ser participante da operação.
@@ -249,7 +253,9 @@ npm run dev                 # http://localhost:3000
 
 ## 10. Usuários de demonstração
 
-Criados pelo seed (iguais aos do projeto PHP). Senha de todos: `password123`.
+Criados pelo seed (equivalentes aos do projeto PHP). Senha de todos: `password123`.
+
+> Credenciais exclusivas para testes locais e demonstração. Não use estas contas nem esta senha em produção.
 
 | Titular | E-mail | Saldo inicial | Cenário |
 | :--- | :--- | :--- | :--- |
@@ -269,23 +275,31 @@ cd frontend && npm test          # 14 testes unitários (formatadores)
 
 Resultado da última execução: **76 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
 
-O arquivo `backend/test/parity.e2e-spec.ts` reproduz os mesmos cenários do teste `ParityScenariosTest` do projeto PHP: duplicidade, valores inválidos, autotransferência, destinatário inexistente, transferências simultâneas, idempotência simultânea, chave reutilizada, rollback, regras de estorno e limite de requisições.
+| Arquivo | Cobre | Equivalente no PHP |
+| :--- | :--- | :--- |
+| `test/parity.e2e-spec.ts` | Duplicidade, login inválido, valores inválidos, autotransferência, destinatário inexistente, transferências e idempotência simultâneas, chave reutilizada ou de outro usuário, rollback, regras de estorno, revogação do JWT e limite de requisições | `ParityScenariosTest`, `AuthTest` e `WalletOperationsTest` |
+| `test/concurrency/multi-process.e2e-spec.ts` | Dois processos Node independentes no mesmo arquivo SQLite | `tests/Concurrency/WalletConcurrencyTest` |
+| `test/compensation.e2e-spec.ts` | Compensação técnica, inclusive a execução real do script | `tests/Feature/CompensationTest` |
 
 ---
 
 ## 12. Decisões técnicas
 
-- **BFF com Next.js:** o token nunca chega ao JavaScript do navegador e a API não precisa aceitar cookies (nem lidar com CSRF).
+- **BFF com Next.js:** o token fica em cookie `httpOnly`, fora do alcance do JavaScript do navegador, e a API só aceita `Authorization: Bearer`. A mitigação de CSRF fica concentrada na camada que recebe cookies (Next.js); a API continua validando identidade, permissões e dados de cada operação.
 - **Domínio sem ORM:** as regras financeiras são testadas sem banco.
-- **`UPDATE` condicional em vez de lock:** funciona igual em SQLite e PostgreSQL e não depende de lock por linha.
+- **`UPDATE` condicional em vez de lock pessimista:** o débito só acontece se o saldo atual for suficiente, sem depender de lock por linha. O comportamento de concorrência, isolamento e transações continua dependendo de cada banco; aqui ele foi validado com SQLite.
 - **Chave de idempotência gerada no formulário:** um duplo clique ou nova tentativa reaproveita a chave; ela só muda depois de um sucesso.
 
 ---
 
-## 13. Limitações conhecidas
+## 13. Escopo e limitações conhecidas
 
-- Não há gateway de pagamento, integração bancária nem webhooks: o dinheiro é apenas um saldo interno.
-- SQLite serializa todas as escritas; para volume real, PostgreSQL (o schema Prisma troca de provider).
+**Fora do escopo**
+- Gateway de pagamento, integração bancária e webhooks: o dinheiro é apenas um saldo interno.
+- Interface administrativa: a compensação técnica só existe via CLI, para quem tem acesso ao servidor. O responsável informado é um identificador declarativo de auditoria, não um operador autenticado; não há gestão de operadores nem papéis administrativos.
+
+**Limitações técnicas**
+- O SQLite aceita um escritor por vez; para volume real, PostgreSQL (o schema Prisma troca de provider, mas a concorrência precisaria ser validada de novo).
 - O limite de requisições fica em memória: reinicia com o processo e não é compartilhado entre instâncias.
-- A compensação técnica não tem tela: é executada por linha de comando por quem tem acesso ao servidor. Não há papéis administrativos na aplicação.
-- A concorrência foi testada com dois processos na mesma máquina, não sob carga real com vários servidores.
+- A concorrência foi testada com dois processos na mesma máquina; não houve teste de carga nem com vários servidores.
+- O logout invalida os tokens anteriores pela `tokenVersion`, o que encerra as sessões do usuário em todos os dispositivos.
