@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
-import { apiRequest } from '@/lib/api';
-import { UserParticipant, WalletSummary } from '@/types/wallet';
-import { WalletPortal } from '@/components/wallet/wallet-portal';
+import { redirect } from "next/navigation";
+import { ApiClientError, apiRequest } from "@/lib/api";
+import { UserParticipant, WalletSummary } from "@/types/wallet";
+import { WalletPortal } from "@/components/wallet/wallet-portal";
 
 interface DashboardPageProps {
   searchParams: Promise<{ tab?: string }>;
@@ -18,11 +18,14 @@ export default async function DashboardPage({
 
   try {
     [summary, recipients] = await Promise.all([
-      apiRequest<WalletSummary>('/wallet'),
-      apiRequest<UserParticipant[]>('/users/recipients'),
+      apiRequest<WalletSummary>("/wallet"),
+      apiRequest<UserParticipant[]>("/users/recipients"),
     ]);
-  } catch {
-    redirect('/login');
+  } catch (error) {
+    if (error instanceof ApiClientError && error.statusCode === 401) {
+      redirect("/session/expired");
+    }
+    throw error;
   }
 
   const resolvedSearchParams = await searchParams;
@@ -35,4 +38,3 @@ export default async function DashboardPage({
     />
   );
 }
-
