@@ -236,6 +236,8 @@ npm run db:seed
 npm run start:dev           # http://localhost:3333
 ```
 
+O seed só popula um banco **vazio** (não altera contas existentes).
+
 ```bash
 cd frontend
 cp .env.example .env.local
