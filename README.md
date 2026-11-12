@@ -270,10 +270,10 @@ Criados pelo seed (equivalentes aos do projeto PHP). Senha de todos: `password12
 ```bash
 cd backend && npm test           # 37 testes unitários (domínio, DTOs, serviços)
 cd backend && npm run test:e2e   # 25 testes: integração, paridade, compensação e concorrência entre processos
-cd frontend && npm test          # 14 testes unitários (formatadores)
+cd frontend && npm test          # 15 testes unitários (formatadores)
 ```
 
-Resultado da última execução: **76 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
+Resultado da última execução: **77 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
 
 | Arquivo | Cobre | Equivalente no PHP |
 | :--- | :--- | :--- |

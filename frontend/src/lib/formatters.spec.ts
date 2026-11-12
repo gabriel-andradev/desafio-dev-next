@@ -46,6 +46,11 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
       expect(formatCurrencyInput('125050')).toBe('1.250,50');
     });
 
+    it('should cap the input at 11 digits so very large amounts stay exact (same as PHP)', () => {
+      expect(formatCurrencyInput('55555555555')).toBe('555.555.555,55');
+      expect(formatCurrencyInput('1234567890123456789012')).toBe('123.456.789,01');
+    });
+
     it('should automatically strip letters and invalid characters', () => {
       expect(formatCurrencyInput('5hgh4y')).toBe('0,54');
       expect(formatCurrencyInput('abc')).toBe('');

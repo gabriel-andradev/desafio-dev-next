@@ -61,12 +61,17 @@ export function formatCpf(cpf: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
 }
 
+const MAX_AMOUNT_INPUT_DIGITS = 11;
+
 /**
  * Formats a raw numeric/digit string into formatted BRL currency representation (e.g. "1.250,50").
  * Strips any non-digit character and treats numbers from right-to-left in cents.
  */
 export function formatCurrencyInput(value: string): string {
-  const digits = value.replace(/\D/g, '');
+  // At most 11 digits (999.999.999,99), as in the PHP version: already above the R$ 1.000.000,00
+  // ceiling (so the API still answers "excede o limite") and far below Number.MAX_SAFE_INTEGER,
+  // so the value shown is always exact.
+  const digits = value.replace(/\D/g, '').slice(0, MAX_AMOUNT_INPUT_DIGITS);
   if (!digits) {
     return '';
   }
