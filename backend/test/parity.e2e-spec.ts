@@ -131,49 +131,6 @@ describe('Parity scenarios (e2e)', () => {
       .expect(404);
   });
 
-  it('does not let two simultaneous transfers spend the same balance', async () => {
-    const sender = await registerWithBalance('sender@test.com', 10_000);
-    const receiver = await registerWithBalance('receiver@test.com', 0);
-
-    const send = () =>
-      http()
-        .post('/api/wallet/transfer')
-        .set('Authorization', `Bearer ${sender.token}`)
-        .send({ recipientIdentifier: 'receiver@test.com', amountCents: 8_000 });
-
-    const statuses = (await Promise.all([send(), send()]))
-      .map((r) => r.status)
-      .sort();
-
-    expect(statuses).toEqual([201, 422]);
-    expect(await balanceOf(sender.userId)).toBe(2_000);
-    expect(await balanceOf(receiver.userId)).toBe(8_000);
-    expect(
-      await prisma.transaction.count({ where: { type: 'TRANSFER' } }),
-    ).toBe(1);
-  });
-
-  it('credits only once when the same idempotency key arrives twice at the same time', async () => {
-    const user = await registerWithBalance('idem@test.com', 0);
-
-    const deposit = () =>
-      http()
-        .post('/api/wallet/deposit')
-        .set('Authorization', `Bearer ${user.token}`)
-        .set('x-idempotency-key', 'same-key-001')
-        .send({ amountCents: 5_000 });
-
-    const [first, second] = await Promise.all([deposit(), deposit()]);
-
-    expect(first.status).toBe(201);
-    expect(second.status).toBe(201);
-    expect(first.body.transaction.id).toBe(second.body.transaction.id);
-    expect(await balanceOf(user.userId)).toBe(5_000);
-    expect(await prisma.transaction.count({ where: { type: 'DEPOSIT' } })).toBe(
-      1,
-    );
-  });
-
   it('rejects reusing an idempotency key for a different operation with 409', async () => {
     const user = await registerWithBalance('reuse@test.com', 0);
     const send = (amountCents: number) =>

@@ -51,12 +51,5 @@ export class Money {
   isCoveredBy(balanceCents: number): boolean {
     return balanceCents >= this.cents;
   }
-
-  /**
-   * Adds this monetary amount to a current balance (supporting negative balance recovery).
-   */
-  addToBalance(currentBalanceCents: number): number {
-    return currentBalanceCents + this.cents;
-  }
 }
 

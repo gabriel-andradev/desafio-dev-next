@@ -26,11 +26,6 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
       expect(() => Money.fromCents(-500)).toThrow(UnprocessableEntityException);
     });
 
-    it('should accurately calculate new balance when depositing into a negative wallet', () => {
-      const depositAmount = Money.fromCents(12000);
-      const updatedBalance = depositAmount.addToBalance(-5000);
-      expect(updatedBalance).toBe(7000);
-    });
   });
 
   describe('TransactionDomainRules', () => {

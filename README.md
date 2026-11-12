@@ -268,17 +268,17 @@ Criados pelo seed (equivalentes aos do projeto PHP). Senha de todos: `password12
 ## 11. Testes
 
 ```bash
-cd backend && npm test           # 37 testes unitários (domínio, DTOs, serviços)
-cd backend && npm run test:e2e   # 25 testes: integração, paridade, compensação e concorrência entre processos
+cd backend && npm test           # 31 testes unitários (domínio, DTOs, serviços)
+cd backend && npm run test:e2e   # 23 testes: integração, paridade, compensação e concorrência entre processos
 cd frontend && npm test          # 15 testes unitários (formatadores)
 ```
 
-Resultado da última execução: **77 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
+Resultado da última execução: **69 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
 
 | Arquivo | Cobre | Equivalente no PHP |
 | :--- | :--- | :--- |
-| `test/parity.e2e-spec.ts` | Duplicidade, login inválido, valores inválidos, autotransferência, destinatário inexistente, transferências e idempotência simultâneas, chave reutilizada ou de outro usuário, rollback, regras de estorno, revogação do JWT e limite de requisições | `ParityScenariosTest`, `AuthTest` e `WalletOperationsTest` |
-| `test/concurrency/multi-process.e2e-spec.ts` | Dois processos Node independentes no mesmo arquivo SQLite | `tests/Concurrency/WalletConcurrencyTest` |
+| `test/parity.e2e-spec.ts` | Duplicidade, login inválido, valores inválidos, autotransferência, destinatário inexistente, chave reutilizada ou de outro usuário, rollback, regras de estorno, revogação do JWT e limite de requisições | `ParityScenariosTest`, `AuthTest` e `WalletOperationsTest` |
+| `test/concurrency/multi-process.e2e-spec.ts` | Transferências e idempotência simultâneas e rollback, com dois processos Node independentes no mesmo arquivo SQLite | `tests/Concurrency/WalletConcurrencyTest` |
 | `test/compensation.e2e-spec.ts` | Compensação técnica, inclusive a execução real do script | `tests/Feature/CompensationTest` |
 
 ---
