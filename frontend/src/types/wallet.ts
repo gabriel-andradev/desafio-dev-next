@@ -40,5 +40,10 @@ export interface WalletSummary {
 export interface ActionState {
   success: boolean;
   message?: string;
+  /**
+   * Values to show again after an error (never the password). React 19 resets uncontrolled form
+   * fields after a Server Action, so without this the user would retype everything.
+   */
+  fields?: Record<string, string>;
 }
 

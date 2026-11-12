@@ -30,6 +30,7 @@ export class TransferDto {
 
   @IsOptional()
   @IsString({ message: 'A chave de idempotência deve ser uma string válida.' })
+  @MaxLength(100, { message: 'A chave de idempotência deve ter no máximo 100 caracteres.' })
   idempotencyKey?: string;
 }
 

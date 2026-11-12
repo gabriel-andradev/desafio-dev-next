@@ -61,7 +61,7 @@ npm run wallet:compensate -- --transaction=<id> "--reason=Crédito duplicado na 
 
 **Idempotência:** depósitos e transferências aceitam uma chave (`X-Idempotency-Key` ou campo `idempotencyKey`). Repetir a chave devolve a operação original sem mover dinheiro; reutilizá-la em outra operação — ou usar a chave de outro usuário — retorna **409**, sem expor a operação original.
 
-**Limite de requisições:** login e cadastro, 10/min; operações da carteira, 30/min; demais rotas, 120/min. Acima disso, **429**.
+**Limite de requisições:** login e cadastro, 10/min (por e-mail + IP); operações da carteira, 30/min (por usuário); demais rotas, 120/min. Acima disso, **429**. A contagem não é por IP puro porque todas as chamadas do navegador chegam à API pelo BFF (mesmo IP); ver `AppThrottlerGuard`.
 
 **Códigos HTTP:** 201 criação · 200 consulta e estorno · 401 não autenticado/credencial inválida · 403 sem permissão · 404 inexistente · 409 conflito · 422 dado inválido ou regra violada · 429 limite.
 
@@ -269,11 +269,11 @@ Criados pelo seed (equivalentes aos do projeto PHP). Senha de todos: `password12
 
 ```bash
 cd backend && npm test           # 31 testes unitários (domínio, DTOs, serviços)
-cd backend && npm run test:e2e   # 23 testes: integração, paridade, compensação e concorrência entre processos
+cd backend && npm run test:e2e   # 26 testes: integração, paridade, compensação e concorrência entre processos
 cd frontend && npm test          # 15 testes unitários (formatadores)
 ```
 
-Resultado da última execução: **69 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
+Resultado da última execução: **72 testes, todos passando**. Os testes e2e usam um banco próprio (`backend/test/e2e.db`, recriado a cada execução) e nunca o `dev.db`.
 
 | Arquivo | Cobre | Equivalente no PHP |
 | :--- | :--- | :--- |

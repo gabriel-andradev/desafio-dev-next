@@ -65,9 +65,10 @@ function AuthHeader({ isLogin }: { isLogin: boolean }) {
 interface RegisterFieldsProps {
   cpf: string;
   setCpf: (value: string) => void;
+  defaultName?: string;
 }
 
-function RegisterFields({ cpf, setCpf }: RegisterFieldsProps) {
+function RegisterFields({ cpf, setCpf, defaultName }: RegisterFieldsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -84,6 +85,7 @@ function RegisterFields({ cpf, setCpf }: RegisterFieldsProps) {
           required
           minLength={3}
           maxLength={100}
+          defaultValue={defaultName}
           placeholder="Ex: Gabriel Silva"
           className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
         />
@@ -207,7 +209,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
 
         <form action={formAction} className="space-y-4 text-xs sm:text-sm">
-          {!isLogin && <RegisterFields cpf={cpf} setCpf={setCpf} />}
+          {!isLogin && (
+            <RegisterFields
+              cpf={cpf}
+              setCpf={setCpf}
+              defaultName={state.fields?.name}
+            />
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -222,6 +230,9 @@ export function AuthForm({ mode }: AuthFormProps) {
                 name="email"
                 type="email"
                 required
+                // After an error the action returns what was typed; React 19 resets the form to these
+                // defaults (same behaviour as Laravel's old() input). The password is never returned.
+                defaultValue={state.fields?.email}
                 placeholder="voce@cobuccio.com"
                 className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
               />

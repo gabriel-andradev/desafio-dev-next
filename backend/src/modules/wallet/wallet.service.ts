@@ -61,6 +61,15 @@ export class WalletService {
     }
   }
 
+  /** Same limit as the Laravel version (`idempotency_key` max:100); the header bypasses the DTO, so check here. */
+  static assertIdempotencyKeyLength(key: string | undefined): void {
+    if (key && key.length > 100) {
+      throw new UnprocessableEntityException(
+        'A chave de idempotência deve ter no máximo 100 caracteres.',
+      );
+    }
+  }
+
   static isTransientLockError(error: unknown): boolean {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       return error.code === 'P2034';
@@ -222,6 +231,7 @@ export class WalletService {
     idempotencyKey?: string,
   ): Promise<DepositResult> {
     const key = idempotencyKey?.trim() || dto.idempotencyKey?.trim();
+    WalletService.assertIdempotencyKeyLength(key);
 
     if (key) {
       const existingTx = await this.prisma.transaction.findUnique({
@@ -303,6 +313,7 @@ export class WalletService {
     idempotencyKey?: string,
   ): Promise<TransferResult> {
     const key = idempotencyKey?.trim() || dto.idempotencyKey?.trim();
+    WalletService.assertIdempotencyKeyLength(key);
 
     if (key) {
       const existingTx = await this.prisma.transaction.findUnique({

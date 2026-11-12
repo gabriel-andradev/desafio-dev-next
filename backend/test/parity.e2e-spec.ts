@@ -271,6 +271,55 @@ describe('Parity scenarios (e2e)', () => {
       .expect(200);
   });
 
+  it('replays an idempotent request with 200 and the same transaction', async () => {
+    const user = await registerWithBalance('replay@test.com', 0);
+    const deposit = () =>
+      http()
+        .post('/api/wallet/deposit')
+        .set('Authorization', `Bearer ${user.token}`)
+        .set('x-idempotency-key', 'replay-key')
+        .send({ amountCents: 5_000 });
+
+    const first = await deposit().expect(201);
+    const replay = await deposit().expect(200);
+
+    expect(replay.body.transaction.id).toBe(first.body.transaction.id);
+    expect(await balanceOf(user.userId)).toBe(5_000);
+  });
+
+  it('rejects an idempotency key longer than 100 characters (header or body) with 422', async () => {
+    const user = await registerWithBalance('longkey@test.com', 0);
+
+    await http()
+      .post('/api/wallet/deposit')
+      .set('Authorization', `Bearer ${user.token}`)
+      .set('x-idempotency-key', 'k'.repeat(101))
+      .send({ amountCents: 100 })
+      .expect(422);
+    await http()
+      .post('/api/wallet/deposit')
+      .set('Authorization', `Bearer ${user.token}`)
+      .send({ amountCents: 100, idempotencyKey: 'k'.repeat(101) })
+      .expect(422);
+    expect(await balanceOf(user.userId)).toBe(0);
+  });
+
+  it('counts the wallet rate limit per user, not per IP (all users come through the BFF)', async () => {
+    const busy = await registerWithBalance('busy@test.com', 0);
+    const other = await registerWithBalance('other@test.com', 0);
+    const deposit = (token: string) =>
+      http()
+        .post('/api/wallet/deposit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amountCents: 1 });
+
+    for (let i = 0; i < 30; i++) {
+      await deposit(busy.token).expect(201);
+    }
+    await deposit(busy.token).expect(429);
+    await deposit(other.token).expect(201);
+  });
+
   it('rate-limits login attempts: at most 10 per minute, then 429', async () => {
     const statuses: number[] = [];
     for (let attempt = 0; attempt < 11; attempt++) {

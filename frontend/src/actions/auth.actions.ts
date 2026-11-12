@@ -26,6 +26,7 @@ export async function loginAction(
   if (!email || !password) {
     return {
       success: false,
+      fields: { email },
       message: 'Preencha o e-mail e a senha para continuar.',
     };
   }
@@ -33,7 +34,9 @@ export async function loginAction(
   if (!isValidEmail(email)) {
     return {
       success: false,
-      message: 'Informe um endereço de e-mail válido (ex: seu.nome@dominio.com).',
+      fields: { email },
+      message:
+        'Informe um endereço de e-mail válido (ex: seu.nome@dominio.com).',
     };
   }
 
@@ -53,10 +56,11 @@ export async function loginAction(
     });
   } catch (error) {
     if (error instanceof ApiClientError) {
-      return { success: false, message: error.message };
+      return { success: false, fields: { email }, message: error.message };
     }
     return {
       success: false,
+      fields: { email },
       message: 'Não foi possível conectar ao servidor de autenticação.',
     };
   }
@@ -79,6 +83,7 @@ export async function registerAction(
   if (!name || !cpf || !email || !password) {
     return {
       success: false,
+      fields: { name, email },
       message: 'Todos os campos são obrigatórios para abertura da conta.',
     };
   }
@@ -86,6 +91,7 @@ export async function registerAction(
   if (cpf.length !== 11) {
     return {
       success: false,
+      fields: { name, email },
       message: 'O CPF deve conter exatamente 11 dígitos numéricos.',
     };
   }
@@ -93,7 +99,9 @@ export async function registerAction(
   if (!isValidEmail(email)) {
     return {
       success: false,
-      message: 'Informe um endereço de e-mail válido (ex: seu.nome@dominio.com).',
+      fields: { name, email },
+      message:
+        'Informe um endereço de e-mail válido (ex: seu.nome@dominio.com).',
     };
   }
 
@@ -113,10 +121,15 @@ export async function registerAction(
     });
   } catch (error) {
     if (error instanceof ApiClientError) {
-      return { success: false, message: error.message };
+      return {
+        success: false,
+        fields: { name, email },
+        message: error.message,
+      };
     }
     return {
       success: false,
+      fields: { name, email },
       message: 'Não foi possível concluir o cadastro no momento.',
     };
   }
@@ -142,4 +155,3 @@ export async function logoutAction(): Promise<void> {
   cookieStore.delete(AUTH_COOKIE_NAME);
   redirect('/login');
 }
-
