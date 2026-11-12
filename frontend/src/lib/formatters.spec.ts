@@ -48,7 +48,9 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
 
     it('should cap the input at 11 digits so very large amounts stay exact (same as PHP)', () => {
       expect(formatCurrencyInput('55555555555')).toBe('555.555.555,55');
-      expect(formatCurrencyInput('1234567890123456789012')).toBe('123.456.789,01');
+      expect(formatCurrencyInput('1234567890123456789012')).toBe(
+        '123.456.789,01',
+      );
     });
 
     it('should automatically strip letters and invalid characters', () => {
@@ -63,8 +65,12 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
     });
 
     it('should preserve email as-is without applying CPF formatting', () => {
-      expect(formatRecipientInput('bruno@cobuccio.com')).toBe('bruno@cobuccio.com');
-      expect(formatRecipientInput('  bruno@cobuccio.com  ')).toBe('bruno@cobuccio.com');
+      expect(formatRecipientInput('bruno@cobuccio.com')).toBe(
+        'bruno@cobuccio.com',
+      );
+      expect(formatRecipientInput('  bruno@cobuccio.com  ')).toBe(
+        'bruno@cobuccio.com',
+      );
     });
   });
 
@@ -86,7 +92,7 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
       expect(isAllowedNumericKey('5', false)).toBe(true);
       expect(isAllowedNumericKey('Backspace', false)).toBe(true);
       expect(isAllowedNumericKey('Tab', false)).toBe(true);
-      expect(isAllowedNumericKey('v', true)).toBe(true); // Ctrl+V
+      expect(isAllowedNumericKey('v', true)).toBe(true);
     });
 
     it('should block letters and special characters', () => {
@@ -111,4 +117,3 @@ describe('Frontend Currency & CPF Utilities (TDD)', () => {
     });
   });
 });
-

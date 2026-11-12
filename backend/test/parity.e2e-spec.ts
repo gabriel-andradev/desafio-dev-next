@@ -17,8 +17,10 @@ describe('Parity scenarios (e2e)', () => {
 
   const http = () => request(app.getHttpServer());
 
-  // Users are created straight in the database with a signed JWT: going through /auth/register for
-  // every scenario would hit the 10 req/min rate limit (covered by its own scenario below).
+  /**
+   * Users are created straight in the database with a signed JWT: going through /auth/register for
+   * every scenario would hit the 10 req/min rate limit (covered by its own scenario below).
+   */
   async function registerWithBalance(email: string, balanceCents: number) {
     const user = await prisma.user.create({
       data: {
@@ -166,7 +168,6 @@ describe('Parity scenarios (e2e)', () => {
     const sender = await registerWithBalance('rollback-a@test.com', 10_000);
     const receiver = await registerWithBalance('rollback-b@test.com', 1_000);
 
-    // Wrap the interactive transaction so that inserting the ledger row fails after the balances changed.
     const originalTransaction = prisma.$transaction.bind(prisma) as (
       fn: (tx: unknown) => Promise<unknown>,
     ) => Promise<unknown>;
@@ -329,7 +330,6 @@ describe('Parity scenarios (e2e)', () => {
       statuses.push(res.status);
     }
 
-    // Earlier scenarios in this file already used part of the per-minute budget.
     expect(statuses).toContain(429);
     expect(
       statuses.filter((status) => status !== 429).length,

@@ -104,6 +104,7 @@ export class UsersService {
 
   /**
    * Lists all registered users except the current user for transfer recipient selection.
+   * Contacts only need enough to recognise someone: the full CPF never leaves the API (LGPD data minimisation).
    */
   async listRecipients(excludeUserId: string) {
     const users = await this.prisma.user.findMany({
@@ -119,7 +120,6 @@ export class UsersService {
       orderBy: { name: 'asc' },
     });
 
-    // Contacts only need enough to recognise someone: the full CPF never leaves the API (LGPD data minimisation).
     return users.map(({ cpf, ...contact }) => ({
       ...contact,
       maskedCpf: UsersService.maskCpf(cpf),

@@ -7,6 +7,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 /**
  * Bootstraps the NestJS application with global validation, exception handling, logging, and OpenAPI documentation.
+ * Invalid input returns 422, the same status Laravel uses for a failed Form Request.
  */
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -24,7 +25,6 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      // 422 for invalid input, the same status Laravel uses for a failed Form Request.
       errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
     }),
   );

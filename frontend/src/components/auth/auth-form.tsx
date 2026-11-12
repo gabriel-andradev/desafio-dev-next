@@ -2,7 +2,13 @@
 
 import { useActionState, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from 'lucide-react';
 import { loginAction, registerAction } from '@/actions/auth.actions';
 import { formatCpf, isAllowedNumericKey } from '@/lib/formatters';
 import { ActionState } from '@/types/wallet';
@@ -172,6 +178,8 @@ function PasswordField({
 
 /**
  * Renders the authentication card for either sign-in or account registration bound to Server Actions.
+ * After an error the action returns what was typed (never the password) and React 19 resets the form to
+ * those defaults, the same behaviour as Laravel's old() input.
  */
 export function AuthForm({ mode }: AuthFormProps) {
   const isLogin = mode === 'login';
@@ -230,8 +238,6 @@ export function AuthForm({ mode }: AuthFormProps) {
                 name="email"
                 type="email"
                 required
-                // After an error the action returns what was typed; React 19 resets the form to these
-                // defaults (same behaviour as Laravel's old() input). The password is never returned.
                 defaultValue={state.fields?.email}
                 placeholder="voce@cobuccio.com"
                 className="w-full px-3.5 py-2.5 rounded-lg bg-brand-dark border border-white/15 text-white placeholder-slate-500 focus:outline-none focus:border-brand-gold transition"
@@ -277,4 +283,3 @@ export function AuthForm({ mode }: AuthFormProps) {
     </main>
   );
 }
-

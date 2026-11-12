@@ -7,6 +7,7 @@ import { ActionState } from '@/types/wallet';
 
 /**
  * Processes a wallet deposit request, converting BRL input to integer cents and revalidating the dashboard.
+ * The idempotency key comes from the form, so a retry or double submit of the same form reuses it.
  */
 export async function depositAction(
   _prevState: ActionState,
@@ -24,7 +25,6 @@ export async function depositAction(
   }
 
   try {
-    // The key comes from the form: a retry or double submit of the same form reuses it.
     const idempotencyKey =
       String(formData.get('idempotencyKey') || '') || crypto.randomUUID();
     await apiRequest('/wallet/deposit', {
@@ -58,6 +58,7 @@ export async function depositAction(
 
 /**
  * Processes a peer-to-peer transfer request and revalidates the dashboard cache upon completion.
+ * The idempotency key comes from the form, so a retry or double submit of the same form reuses it.
  */
 export async function transferAction(
   _prevState: ActionState,
@@ -82,7 +83,8 @@ export async function transferAction(
     if (!isValidEmail(recipientIdentifier)) {
       return {
         success: false,
-        message: 'Informe um endereço de e-mail válido (ex: destinatario@cobuccio.com).',
+        message:
+          'Informe um endereço de e-mail válido (ex: destinatario@cobuccio.com).',
       };
     }
   } else {
@@ -103,7 +105,6 @@ export async function transferAction(
   }
 
   try {
-    // The key comes from the form: a retry or double submit of the same form reuses it.
     const idempotencyKey =
       String(formData.get('idempotencyKey') || '') || crypto.randomUUID();
     await apiRequest('/wallet/transfer', {
@@ -177,4 +178,3 @@ export async function reverseTransactionAction(
     };
   }
 }
-

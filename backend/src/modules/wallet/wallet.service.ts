@@ -164,6 +164,8 @@ export class WalletService {
 
   /**
    * Lists all incoming and outgoing transactions for a given wallet ordered by newest first.
+   * Money leaves the wallet whenever it is the sender; this also covers a deposit reversal, whose sender
+   * and receiver are the same wallet and which is a debit.
    */
   async listTransactions(walletId: string) {
     const transactions = await this.prisma.transaction.findMany({
@@ -206,8 +208,6 @@ export class WalletService {
         status: tx.status,
         amountCents: tx.amountCents,
         description: tx.description,
-        // Money leaves the wallet whenever it is the sender. This also covers a deposit reversal,
-        // whose sender and receiver are the same wallet and which is a debit.
         direction: tx.senderWalletId === walletId ? 'OUT' : 'IN',
         sender: tx.senderWallet?.user ?? null,
         receiver: tx.receiverWallet.user,
@@ -522,6 +522,8 @@ export class WalletService {
 
   /**
    * Shared reversal core (user request or compensation). Runs inside the caller's interactive transaction.
+   * The status changes conditionally, so if a concurrent request reversed it first nothing is updated.
+   * The receiver may already have spent the money, so the debit may leave a negative balance (policy).
    */
   private async applyReversal(
     tx: Prisma.TransactionClient,
@@ -530,7 +532,6 @@ export class WalletService {
     source: 'USER' | 'COMPENSATION',
     actor: string,
   ): Promise<Transaction> {
-    // Conditional status change: if a concurrent request reversed it first, nothing is updated.
     const statusUpdate = await tx.transaction.updateMany({
       where: { id: originalTx.id, status: TransactionStatus.COMPLETED },
       data: {
@@ -546,7 +547,6 @@ export class WalletService {
       );
     }
 
-    // The receiver may already have spent the money: the debit is allowed to go negative (policy).
     await tx.wallet.update({
       where: { id: originalTx.receiverWalletId },
       data: { balanceCents: { decrement: originalTx.amountCents } },

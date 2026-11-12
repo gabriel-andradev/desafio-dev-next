@@ -44,6 +44,10 @@ export class WalletController {
     return this.walletService.listTransactions(user.walletId);
   }
 
+  /**
+   * Responds 201 when the deposit is created and 200 when replaying an earlier request with the same
+   * idempotency key (same as the Laravel version). The transfer endpoint follows the same rule.
+   */
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Post('deposit')
   @ApiOperation({
@@ -61,7 +65,6 @@ export class WalletController {
       dto,
       idempotencyKey,
     );
-    // 201 when created, 200 when replaying an earlier request (same as the Laravel version).
     res.status(result.isIdempotentReplay ? HttpStatus.OK : HttpStatus.CREATED);
     return result;
   }

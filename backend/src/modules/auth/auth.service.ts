@@ -16,6 +16,7 @@ export class AuthService {
 
   /**
    * Hashes the user's password, creates the account and wallet, and returns a signed JWT.
+   * A brand-new account starts at session version 0.
    */
   async register(dto: RegisterDto) {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
@@ -27,7 +28,6 @@ export class AuthService {
       passwordHash,
     });
 
-    // A brand-new account starts at session version 0.
     const accessToken = await this.generateToken(user.id, user.email, 0);
 
     return {

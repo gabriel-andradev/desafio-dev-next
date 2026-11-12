@@ -30,6 +30,9 @@ const QUICK_AMOUNTS = [
 
 /**
  * Renders the Deposit module with a real-time balance projection and negative balance recovery preview.
+ * After a successful deposit the amount is cleared: the idempotency key rotates on success, so keeping the
+ * old value would let a second click create a second deposit. On error the value is kept for correction
+ * (same behaviour as the Laravel version, which only re-fills inputs after an error).
  */
 export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
   const [amountInput, setAmountInput] = useState('');
@@ -40,9 +43,6 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
 
   const idempotencyKey = useIdempotencyKey(state);
 
-  // After a successful deposit, clear the amount: the idempotency key rotates on success, so keeping
-  // the old value would let a second click create a second deposit. On error the value is kept for
-  // correction (same behaviour as the Laravel version, which only re-fills inputs after an error).
   useEffect(() => {
     if (state.success) {
       setAmountInput('');
@@ -89,7 +89,9 @@ export function DepositModule({ currentBalanceCents }: DepositModuleProps) {
                   e.preventDefault();
                 }
               }}
-              onChange={(e) => setAmountInput(formatCurrencyInput(e.target.value))}
+              onChange={(e) =>
+                setAmountInput(formatCurrencyInput(e.target.value))
+              }
               placeholder="0,00"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-mono text-base focus:outline-none focus:border-brand-navy"
             />

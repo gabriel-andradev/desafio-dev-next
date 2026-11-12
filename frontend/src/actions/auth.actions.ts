@@ -138,18 +138,16 @@ export async function registerAction(
 }
 
 /**
- * Clears the authentication cookie and redirects the user back to the login page.
+ * Revokes the JWT on the API (bumps the user's session version), clears the authentication cookie and
+ * redirects to the login page. If the API call fails (or returns 204 without a JSON body) the cookie is
+ * removed anyway, so a failure never keeps the user logged in on this browser.
  */
 export async function logoutAction(): Promise<void> {
   await requireAuth();
 
-  // Revoke the JWT on the API first (bumps the user's session version), then drop the cookie.
-  // A failure here must not keep the user logged in on this browser.
   try {
     await apiRequest('/auth/logout', { method: 'POST' });
-  } catch {
-    // 204 has no JSON body, or the API is unreachable: the cookie is removed anyway.
-  }
+  } catch {}
 
   const cookieStore = await cookies();
   cookieStore.delete(AUTH_COOKIE_NAME);

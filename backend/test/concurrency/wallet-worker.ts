@@ -1,6 +1,8 @@
 /**
  * Worker used by multi-process.e2e-spec.ts: each invocation is a separate Node.js process (a real
- * concurrent client) using the same SQLite file passed in DATABASE_URL.
+ * concurrent client) using the same SQLite file passed in DATABASE_URL. Every worker waits for the same
+ * instant (startAtEpochMs) so the operations really overlap. `fail-transfer` runs the same transfer but
+ * makes the ledger insert fail after debit and credit, so everything must roll back.
  *
  * Usage: wallet-worker.ts <setup|transfer|deposit|fail-transfer|inspect> [startAtEpochMs] [idempotencyKey]
  */
@@ -22,7 +24,6 @@ async function main(): Promise<void> {
   const prisma = app.get(PrismaService);
   const wallet = app.get(WalletService);
 
-  // Barrier: every worker waits for the same instant so the operations really overlap.
   const startAt = Number(startAtRaw || 0);
   while (startAt > Date.now()) {
     await new Promise((resolve) => setTimeout(resolve, 1));
@@ -85,7 +86,6 @@ async function main(): Promise<void> {
       }
 
       case 'fail-transfer': {
-        // Same transfer, but the ledger insert fails after debit and credit: everything must roll back.
         const original = prisma.$transaction.bind(prisma) as (
           fn: (tx: unknown) => Promise<unknown>,
         ) => Promise<unknown>;

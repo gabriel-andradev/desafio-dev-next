@@ -25,7 +25,6 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
       expect(() => Money.fromCents(0)).toThrow(UnprocessableEntityException);
       expect(() => Money.fromCents(-500)).toThrow(UnprocessableEntityException);
     });
-
   });
 
   describe('TransactionDomainRules', () => {
@@ -102,7 +101,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
 
     it('should allow sender to reverse transfer within 15 minutes repentance window', () => {
       const now = new Date('2026-11-11T12:10:00Z');
-      const createdAt = new Date('2026-11-11T12:00:00Z'); // 10 minutes ago
+      const createdAt = new Date('2026-11-11T12:00:00Z');
 
       expect(() =>
         TransactionDomainRules.validateReversalPreconditions(
@@ -121,7 +120,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
 
     it('should reject sender reversing transfer after 15 minutes repentance window', () => {
       const now = new Date('2026-11-11T12:20:00Z');
-      const createdAt = new Date('2026-11-11T12:00:00Z'); // 20 minutes ago
+      const createdAt = new Date('2026-11-11T12:00:00Z');
 
       expect(() =>
         TransactionDomainRules.validateReversalPreconditions(
@@ -140,7 +139,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
 
     it('should allow recipient to return transfer within 24 hours', () => {
       const now = new Date('2026-11-11T20:00:00Z');
-      const createdAt = new Date('2026-11-11T12:00:00Z'); // 8 hours ago
+      const createdAt = new Date('2026-11-11T12:00:00Z');
 
       expect(() =>
         TransactionDomainRules.validateReversalPreconditions(
@@ -159,7 +158,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
 
     it('should reject recipient returning transfer after 24 hours', () => {
       const now = new Date('2026-11-12T13:00:00Z');
-      const createdAt = new Date('2026-11-11T12:00:00Z'); // 25 hours ago
+      const createdAt = new Date('2026-11-11T12:00:00Z');
 
       expect(() =>
         TransactionDomainRules.validateReversalPreconditions(
@@ -193,7 +192,7 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
 
     it('should reject deposit owner reversing after 24 hours', () => {
       const now = new Date('2026-11-12T13:00:00Z');
-      const createdAt = new Date('2026-11-11T12:00:00Z'); // 25 hours ago
+      const createdAt = new Date('2026-11-11T12:00:00Z');
 
       expect(() =>
         TransactionDomainRules.validateReversalPreconditions(
@@ -222,13 +221,17 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
       it('should be AVAILABLE while the sender is inside the 15-minute window', () => {
         const now = new Date('2026-11-11T12:10:00Z');
 
-        expect(TransactionDomainRules.getReversalState(transfer, 'wallet-1', now)).toBe('AVAILABLE');
+        expect(
+          TransactionDomainRules.getReversalState(transfer, 'wallet-1', now),
+        ).toBe('AVAILABLE');
       });
 
       it('should be EXPIRED once the sender window has passed', () => {
         const now = new Date('2026-11-11T12:20:00Z');
 
-        expect(TransactionDomainRules.getReversalState(transfer, 'wallet-1', now)).toBe('EXPIRED');
+        expect(
+          TransactionDomainRules.getReversalState(transfer, 'wallet-1', now),
+        ).toBe('EXPIRED');
       });
 
       it('should be UNAVAILABLE for an already reversed transaction', () => {
@@ -246,9 +249,10 @@ describe('Wallet Domain - Money Value Object & Transaction Rules (TDD)', () => {
       it('should be UNAVAILABLE for a wallet that did not take part in the transaction', () => {
         const now = new Date('2026-11-11T12:05:00Z');
 
-        expect(TransactionDomainRules.getReversalState(transfer, 'wallet-9', now)).toBe('UNAVAILABLE');
+        expect(
+          TransactionDomainRules.getReversalState(transfer, 'wallet-9', now),
+        ).toBe('UNAVAILABLE');
       });
     });
   });
 });
-

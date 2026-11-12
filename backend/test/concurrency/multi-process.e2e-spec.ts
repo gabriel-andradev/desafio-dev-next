@@ -11,6 +11,10 @@ type WorkerResult = Record<string, unknown> & { ok: boolean };
 const backendDir = path.join(__dirname, '..', '..');
 const worker = path.join(__dirname, 'wallet-worker.ts');
 
+/**
+ * Runs one worker process and returns its result. Only the RESULT: line counts, because editor
+ * extensions may also write to stdout.
+ */
 function runWorker(args: string[]): Promise<WorkerResult> {
   return new Promise((resolve) => {
     const child = spawn(
@@ -26,7 +30,6 @@ function runWorker(args: string[]): Promise<WorkerResult> {
     child.stdout.on('data', (chunk) => (stdout += chunk));
     child.stderr.on('data', (chunk) => (stderr += chunk));
     child.on('close', () => {
-      // Only the RESULT: line counts (editor extensions may also write to stdout).
       const line = stdout
         .split(String.fromCharCode(10))
         .map((l) => l.trim())
@@ -57,7 +60,6 @@ describe('Concurrency between independent Node.js processes (e2e)', () => {
   }, 60_000);
 
   it('two simultaneous transfers (different keys) cannot spend the same balance', async () => {
-    // Sender has R$ 100,00; two processes try to send R$ 80,00 at the same instant.
     const results = await together([
       ['transfer', 'key-a'],
       ['transfer', 'key-b'],
@@ -67,7 +69,7 @@ describe('Concurrency between independent Node.js processes (e2e)', () => {
     const failures = results.filter((r) => !r.ok);
     expect(successes).toHaveLength(1);
     expect(failures).toHaveLength(1);
-    expect(failures[0].status).toBe(422); // insufficient balance, not SQLITE_BUSY / 500
+    expect(failures[0].status).toBe(422);
 
     const state = await runWorker(['inspect']);
     expect(state).toMatchObject({
